@@ -1,0 +1,24 @@
+{
+  "name": "community-hero-functions",
+  "description": "Community Hero AI - Firebase Cloud Functions",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "deploy": "npm run build && firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0",
+    "@google/generative-ai": "^0.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^20.0.0"
+  },
+  "private": true
+}

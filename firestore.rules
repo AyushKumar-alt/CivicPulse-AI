@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read:  if request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /issues/{issueId} {
+      allow read: if request.auth != null && (
+        resource.data.reporter_uid == request.auth.uid
+        || resource.data.status in ["analyzed", "in_progress", "resolved"]
+        || request.auth.token.role == "authority"
+      );
+
+      allow create: if request.auth != null
+        && request.resource.data.reporter_uid == request.auth.uid;
+
+      allow update: if request.auth.token.role == "authority"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updated_at"]);
+
+      allow delete: if false;
+
+      match /confirmations/{uid} {
+        allow read: if request.auth != null;
+
+        allow create: if request.auth != null
+          && request.auth.uid == uid
+          && request.auth.uid != get(/databases/$(database)/documents/issues/$(issueId)).data.reporter_uid
+          && !exists(/databases/$(database)/documents/issues/$(issueId)/confirmations/$(request.auth.uid));
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
