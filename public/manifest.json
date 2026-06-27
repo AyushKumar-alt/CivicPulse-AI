@@ -1,0 +1,19 @@
+{
+  "name": "Community Hero AI",
+  "short_name": "Community Hero",
+  "description": "AI-powered civic operations platform — report, verify, and resolve community issues.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
