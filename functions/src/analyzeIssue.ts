@@ -14,7 +14,7 @@ interface AiResult {
 const VALID_SEVERITIES = new Set(["low", "medium", "high", "critical"]);
 
 function getDb() {
-  return getFirestore(getApp(), "default");
+  return getFirestore(getApp());
 }
 
 function mimeTypeFromUrl(url: string): string {

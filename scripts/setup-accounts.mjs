@@ -37,9 +37,8 @@ const app = initializeApp({
 });
 
 const auth = getAuth();
-// Database ID is "default" (no parentheses) — created by new Firebase Console.
-// If you ever see "5 NOT_FOUND" here, run: node scripts/detect-firestore-db.mjs
-const db = getFirestore(app, "default");
+// Database ID is default (no arguments) for Spark tier compatibility.
+const db = getFirestore(app);
 
 const ACCOUNTS = [
   {

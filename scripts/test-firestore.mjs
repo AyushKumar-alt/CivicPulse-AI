@@ -11,7 +11,7 @@ const app = initializeApp({
   projectId: serviceAccount.project_id,
 });
 
-const db = getFirestore(app, "default");
+const db = getFirestore(app);
 
 console.log("Project:", serviceAccount.project_id);
 

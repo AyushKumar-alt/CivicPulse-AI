@@ -36,9 +36,9 @@ function getAdminApp() {
   return getApps().length > 0 ? getApp() : createAdminApp();
 }
 
-// Database ID is "default" (no parentheses) — specific to this project's Firestore instance.
+// Database ID is standard (default) for Spark tier compatibility.
 export function getAdminDb() {
-  return getFirestore(getAdminApp(), "default");
+  return getFirestore(getAdminApp());
 }
 
 export function getAdminAuth() {
