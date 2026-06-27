@@ -12,7 +12,7 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 export const onIssueCreated = onDocumentCreated(
   {
     document: "issues/{issueId}",
-    database: "(default)",
+    database: "default",
     secrets: [geminiApiKey],
     timeoutSeconds: 120,
     memory: "512MiB",
