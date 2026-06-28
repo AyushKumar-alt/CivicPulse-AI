@@ -1,0 +1,9 @@
+.next
+node_modules
+.env.local
+.git
+.gitignore
+README.md
+service-account.json
+Dockerfile
+.dockerignore
