@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     if (!decoded.email || !isCommandCenter(decoded.email)) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
-  } catch {
+  } catch (err) {
+    console.error("Token verification failed details:", err);
     return Response.json({ error: "Invalid token" }, { status: 401 });
   }
 
