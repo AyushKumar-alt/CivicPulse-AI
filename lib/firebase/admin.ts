@@ -12,13 +12,22 @@ function createAdminApp() {
   }
 
   // 2. Local development fallback: if service-account.json exists in root, prefer it locally
-  const localSaPath = join(process.cwd(), "service-account.json");
+  let localSaPath = join(process.cwd(), "service-account.json");
+  if (!existsSync(localSaPath)) {
+    // Fallback in case Next.js runs from the user home directory instead of project root
+    localSaPath = join(__dirname, "../../service-account.json");
+  }
+  if (!existsSync(localSaPath)) {
+    // Second fallback specifically for the OneDrive project path
+    localSaPath = join(process.cwd(), "OneDrive/Desktop/community-hero-ai/service-account.json");
+  }
+
   if (existsSync(localSaPath)) {
     try {
       const sa = JSON.parse(readFileSync(localSaPath, "utf8"));
       return initializeApp({ credential: cert(sa) });
     } catch (readError) {
-      console.warn("Failed to read local service-account.json, trying other methods...", readError);
+      console.warn("Failed to read local service-account.json at " + localSaPath + ", trying other methods...", readError);
     }
   }
 
