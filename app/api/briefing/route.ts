@@ -77,9 +77,10 @@ export async function POST(request: NextRequest) {
       return scoreB - scoreA;
     });
 
-    // Pass full IIRs for top 20 issues — the briefing agent reads the reports, not just stats
+    // Pass full IIRs and governance data for top 20 issues
     const issues: BriefingIssue[] = sorted.slice(0, 20).map((d) => {
       const loc = d.location as Record<string, unknown> | null;
+      const gov = d.governance as Record<string, unknown> | null;
       return {
         id: d.id,
         iir: (d.ai ?? null) as IssueIntelligenceReport | null,
@@ -90,6 +91,12 @@ export async function POST(request: NextRequest) {
         escalated: Boolean(d.escalated),
         citizen_concern_level: (d.citizen_concern_level as string) ?? null,
         submitted_at: serializeTimestamp(d.submitted_at),
+        governance: gov
+          ? {
+              report: (gov.report as Record<string, unknown> | null) ?? null,
+              history: (gov.history as unknown[]) ?? [],
+            }
+          : null,
       };
     });
 

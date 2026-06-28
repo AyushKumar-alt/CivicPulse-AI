@@ -148,7 +148,7 @@ Return a JSON object with ALL of the following fields:
   "confidence": 0.0 to 1.0,
   "summary": "2-3 sentences describing the issue for a municipal authority",
   "safety_risk": "one sentence describing the public safety risk if unaddressed",
-  "responsible_authority": "the municipal department most responsible",
+  "responsible_authority": "MUST be exactly one of: Roads & Highways Division | Water Supply & Sewerage (CMWSSB) | Electricity Distribution | Solid Waste & Sanitation | Traffic Management | Public Works Department",
 
   "area_category": "one of: Residential Area | Commercial Area | IT & Research District | Educational Campus | Healthcare Zone | Industrial Estate | Transport Hub | Government Zone | Mixed Use Area",
   "area_confidence": 0.0 to 1.0,
@@ -445,7 +445,7 @@ export async function analyzeIssue(issueId: string): Promise<void> {
     const shouldEscalate = aiResult.severity === "critical" && !(data.escalated as boolean);
 
     // ── Routing Agent (deterministic — no AI) ─────────────────────────────
-    const dept = mapToDepartment(aiResult.responsible_authority);
+    const dept = mapToDepartment(aiResult.responsible_authority, aiResult.issue_type);
 
     // ── Write to Firestore ─────────────────────────────────────────────────
 

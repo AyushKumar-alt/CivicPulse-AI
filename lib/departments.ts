@@ -125,13 +125,16 @@ const ROUTING_RULES: Array<[RegExp, DepartmentKey]> = [
   [/electric|streetlight|street\s*light|lighting|power|tneb|lamp post/i, "electricity"],
   [/water|sewerage|sewage|drainage|pipeline|leakage|waterlogging|flooding|cmwssb|storm drain/i, "cmwssb"],
   [/sanit|garbage|waste|rubbish|trash|solid waste|dump|litter|sweeping/i, "sanitation"],
-  [/road|pothole|footpath|pavement|sidewalk|bitumen|tar road|asphalt/i, "roads"],
+  [/road|highway|pothole|footpath|pavement|sidewalk|bitumen|tar road|asphalt|nhai|transport/i, "roads"],
   [/public works|infrastructure|building|structural|civic maintenance/i, "publicworks"],
 ];
 
-export function mapToDepartment(responsibleAuthority: string): DepartmentInfo {
+export function mapToDepartment(responsibleAuthority: string, issueType?: string): DepartmentInfo {
+  // Combine both signals so issue_type acts as a tiebreaker when responsible_authority
+  // is too generic (e.g. "Public Works Department" for a pothole)
+  const combined = [responsibleAuthority, issueType].filter(Boolean).join(" ");
   for (const [pattern, key] of ROUTING_RULES) {
-    if (pattern.test(responsibleAuthority)) return DEPARTMENTS[key];
+    if (pattern.test(combined)) return DEPARTMENTS[key];
   }
   return DEPARTMENTS.publicworks;
 }

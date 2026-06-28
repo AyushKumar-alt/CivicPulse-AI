@@ -79,6 +79,19 @@ export async function GET(request: NextRequest) {
               generated_at: serializeTimestamp((data.ai as Record<string, unknown>).generated_at),
             }
           : null,
+        // Governance blob
+        governance: data.governance
+          ? {
+              ...(data.governance as Record<string, unknown>),
+              generated_at: serializeTimestamp(
+                (data.governance as Record<string, unknown>).generated_at,
+              ),
+              decided_at: serializeTimestamp(
+                (data.governance as Record<string, unknown>).decided_at,
+              ),
+            }
+          : null,
+        department_progress: (data.department_progress as unknown[]) ?? [],
       };
     });
 

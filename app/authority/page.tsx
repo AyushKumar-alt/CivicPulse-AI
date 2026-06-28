@@ -13,6 +13,8 @@ import { useUserRole } from "@/lib/hooks/useUserRole";
 import { logout } from "@/lib/firebase/auth";
 import { DEPARTMENT_LIST, getDepartmentByKey } from "@/lib/departments";
 import type { DepartmentKey } from "@/lib/departments";
+import { getGreeting } from "@/lib/time/getGreeting";
+import type { GovernanceDecision, GovernanceReport, ReworkOrder, AccountabilityReport } from "@/lib/ai/generateGovernanceReview";
 
 const IssueMap = dynamic(() => import("@/components/IssueMap"), {
   ssr: false,
@@ -80,6 +82,12 @@ interface IssueRecord {
   assignment_method?: string | null;
   // Department operations
   department_status?: string | null;
+  department_progress?: {
+    stage: string;
+    timestamp: unknown;
+    notes: string | null;
+    updated_by: string;
+  }[];
   verification?: {
     confidence: number;
     recommendation: "approve" | "needs_inspection" | "needs_rework";
@@ -88,6 +96,18 @@ interface IssueRecord {
     repair_type: string;
     repair_notes: string;
     after_image_url: string | null;
+  } | null;
+  governance?: {
+    report: GovernanceReport | null;
+    generated_at: number | null;
+    accountability: AccountabilityReport | null;
+    rework_order: ReworkOrder | null;
+    officer_override: {
+      original_ai_decision: string;
+      officer_decision: string;
+      reason: string;
+      officer_email: string;
+    } | null;
   } | null;
   location: {
     lat: number;
@@ -302,6 +322,7 @@ function MorningBriefingCard({
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const greeting = getGreeting();
 
   return (
     <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-b border-gray-700">
@@ -309,9 +330,9 @@ function MorningBriefingCard({
         <div className="flex items-start justify-between mb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-yellow-400 text-base">☀️</span>
+              <span className="text-yellow-400 text-base">{greeting.icon}</span>
               <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">
-                Morning Briefing
+                {greeting.title}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">{dateStr} · {timeStr}</p>
@@ -601,19 +622,49 @@ function MBriefRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ── Verification Card (Command Center approve/reject) ──────────────────────────
+// ── Governance Decision styling ───────────────────────────────────────────────
+
+const GOV_DECISION_STYLE: Record<GovernanceDecision, { bg: string; text: string; border: string; label: string; icon: string }> = {
+  APPROVE_RESOLUTION: { bg: "bg-green-50", text: "text-green-800", border: "border-green-200", label: "Approve Resolution", icon: "✓" },
+  RETURN_FOR_REWORK: { bg: "bg-red-50", text: "text-red-800", border: "border-red-200", label: "Return for Rework", icon: "↩" },
+  REQUEST_DEPARTMENT_EXPLANATION: { bg: "bg-orange-50", text: "text-orange-800", border: "border-orange-200", label: "Request Explanation", icon: "⚠" },
+  ESCALATE_TO_HIGHER_AUTHORITY: { bg: "bg-red-100", text: "text-red-900", border: "border-red-300", label: "Escalate to Higher Authority", icon: "🔺" },
+  REQUIRES_MANUAL_INSPECTION: { bg: "bg-yellow-50", text: "text-yellow-800", border: "border-yellow-200", label: "Requires Manual Inspection", icon: "🔍" },
+  INVALID_CITIZEN_REPORT: { bg: "bg-gray-50", text: "text-gray-600", border: "border-gray-200", label: "Invalid Report", icon: "✕" },
+};
+
+const DEPT_PERF_STYLE: Record<string, { color: string; label: string }> = {
+  excellent: { color: "text-green-700", label: "Excellent" },
+  satisfactory: { color: "text-blue-700", label: "Satisfactory" },
+  needs_improvement: { color: "text-yellow-700", label: "Needs Improvement" },
+  unsatisfactory: { color: "text-red-700", label: "Unsatisfactory" },
+};
+
+// ── Verification Card (Command Center — Governance Review UI) ─────────────────
 
 function VerificationCard({
   issue,
   onDecision,
+  onGenerateGovernance,
   deciding,
+  generatingGov,
+  user,
 }: {
   issue: IssueRecord;
-  onDecision: (id: string, decision: "approve" | "reject") => void;
+  onDecision: (id: string, decision: "approve" | "reject", govDecision: GovernanceDecision, isOverride: boolean, overrideReason?: string) => void;
+  onGenerateGovernance: (id: string) => void;
   deciding: boolean;
+  generatingGov: boolean;
+  user: import("firebase/auth").User;
 }) {
   const v = issue.verification;
+  const gov = issue.governance;
+  const report = gov?.report ?? null;
   const deptInfo = issue.assigned_department ? getDepartmentByKey(issue.assigned_department) : null;
+
+  const [showOverride, setShowOverride] = useState(false);
+  const [overrideDecision, setOverrideDecision] = useState<"approve" | "reject">("approve");
+  const [overrideReason, setOverrideReason] = useState("");
 
   const recColor: Record<string, string> = {
     approve: "bg-green-100 text-green-800 border-green-200",
@@ -621,10 +672,15 @@ function VerificationCard({
     needs_rework: "bg-red-100 text-red-800 border-red-200",
   };
   const recLabel: Record<string, string> = {
-    approve: "✓ AI Recommends Approval",
-    needs_inspection: "⚠ AI: Needs Inspection",
-    needs_rework: "✗ AI: Needs Rework",
+    approve: "✓ Technical Verification: Approved",
+    needs_inspection: "⚠ Technical Verification: Needs Inspection",
+    needs_rework: "✗ Technical Verification: Needs Rework",
   };
+
+  const govStyle = report ? (GOV_DECISION_STYLE[report.decision] ?? GOV_DECISION_STYLE.REQUIRES_MANUAL_INSPECTION) : null;
+  const perfStyle = report ? (DEPT_PERF_STYLE[report.department_performance] ?? DEPT_PERF_STYLE.satisfactory) : null;
+
+  void user; // used via parent for token
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -635,6 +691,11 @@ function VerificationCard({
           <span className="font-semibold text-sm text-gray-900 truncate">
             {issue.ai?.issue_type ?? "Issue"} — Pending Verification
           </span>
+          {report && (
+            <span className="shrink-0 text-xs bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-medium">
+              Gov. Review
+            </span>
+          )}
         </div>
         {deptInfo && (
           <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-medium ${deptInfo.badgeClass}`}>
@@ -644,7 +705,7 @@ function VerificationCard({
       </div>
 
       <div className="p-4 space-y-3">
-        {/* AI severity + image */}
+        {/* Issue summary */}
         <div className="flex gap-3">
           {issue.image_url && (
             <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
@@ -667,9 +728,9 @@ function VerificationCard({
           </div>
         </div>
 
+        {/* Technical Verification */}
         {v ? (
           <>
-            {/* AI Verification result */}
             <div className={`rounded-lg border p-3 ${recColor[v.recommendation] ?? "bg-gray-50"}`}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold">{recLabel[v.recommendation] ?? v.recommendation}</span>
@@ -678,14 +739,12 @@ function VerificationCard({
               <p className="text-xs leading-relaxed">{v.reasoning}</p>
             </div>
 
-            {/* Repair summary */}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Repair Submitted</p>
               <p className="text-xs font-semibold text-gray-800">{v.repair_type}</p>
               <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{v.repair_notes}</p>
             </div>
 
-            {/* After image */}
             {v.after_image_url && (
               <div className="rounded-lg overflow-hidden border border-gray-200 h-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -693,10 +752,9 @@ function VerificationCard({
               </div>
             )}
 
-            {/* Concerns */}
             {v.concerns.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">AI Concerns</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Technical Concerns</p>
                 <ul className="space-y-0.5">
                   {v.concerns.map((c, i) => (
                     <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
@@ -708,28 +766,213 @@ function VerificationCard({
             )}
           </>
         ) : (
-          <p className="text-xs text-gray-400 italic">Verification report not yet available.</p>
+          <p className="text-xs text-gray-400 italic">Technical verification not yet available.</p>
         )}
 
-        {/* Approve / Reject */}
-        <div className="flex gap-3 pt-2 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => onDecision(issue.id, "approve")}
-            disabled={deciding}
-            className="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            ✓ Approve & Resolve
-          </button>
-          <button
-            type="button"
-            onClick={() => onDecision(issue.id, "reject")}
-            disabled={deciding}
-            className="flex-1 py-2.5 bg-red-50 text-red-700 border border-red-200 text-sm font-bold rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
-          >
-            ✗ Send Back
-          </button>
-        </div>
+        {/* ── Governance Review ── */}
+        {!report ? (
+          <div className="pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => onGenerateGovernance(issue.id)}
+              disabled={generatingGov}
+              className="w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {generatingGov ? "Generating Governance Review…" : "🏛 Generate Governance Review"}
+            </button>
+            <p className="text-xs text-gray-400 text-center mt-1.5">
+              Run AI Governance Review before making approval decision
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            {/* Governance header */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-indigo-600 text-sm">🏛</span>
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-widest">AI Governance Report</span>
+            </div>
+
+            {/* Decision */}
+            {govStyle && (
+              <div className={`rounded-lg border p-3 ${govStyle.bg} ${govStyle.border}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold ${govStyle.text}`}>
+                    {govStyle.icon} {govStyle.label}
+                  </span>
+                  <span className={`text-xs font-bold ${govStyle.text}`}>
+                    {report.decision_confidence}% confidence
+                  </span>
+                </div>
+                <p className={`text-xs leading-relaxed ${govStyle.text}`}>{report.executive_summary}</p>
+              </div>
+            )}
+
+            {/* Metrics row */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className={`text-xs font-bold ${perfStyle?.color ?? "text-gray-700"}`}>
+                  {perfStyle?.label ?? report.department_performance}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Dept Performance</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs font-bold text-gray-800 capitalize">{report.completion_quality}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Completion Quality</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className={`text-xs font-bold capitalize ${
+                  report.citizen_risk === "none" ? "text-green-700" :
+                  report.citizen_risk === "low" ? "text-blue-700" :
+                  report.citizen_risk === "medium" ? "text-yellow-700" : "text-red-700"
+                }`}>
+                  {report.citizen_risk}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Citizen Risk</p>
+              </div>
+            </div>
+
+            {/* Officer notes */}
+            {report.officer_notes && (
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                <p className="text-xs font-semibold text-blue-700 mb-0.5">Officer Notes</p>
+                <p className="text-xs text-blue-800 leading-relaxed">{report.officer_notes}</p>
+              </div>
+            )}
+
+            {/* Accountability flag */}
+            {report.accountability_required && (
+              <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                <p className="text-xs font-semibold text-orange-800 mb-0.5">⚠ Accountability Flag</p>
+                <p className="text-xs text-orange-700">{report.accountability_reason}</p>
+              </div>
+            )}
+
+            {/* Rework order preview */}
+            {gov?.rework_order && (
+              <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                <p className="text-xs font-semibold text-red-800 mb-1">↩ Rework Order Issued</p>
+                <p className="text-xs text-red-700 mb-1">Deadline: {gov.rework_order.suggested_deadline}</p>
+                {gov.rework_order.reasons.slice(0, 2).map((r, i) => (
+                  <p key={i} className="text-xs text-red-600">• {r}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Required actions */}
+            {report.required_actions.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Required Actions</p>
+                <ul className="space-y-0.5">
+                  {report.required_actions.map((a, i) => (
+                    <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                      <span className="text-indigo-500 mt-0.5 shrink-0">{i + 1}.</span>{a}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Deadline */}
+            {report.deadline_recommendation && (
+              <p className="text-xs text-gray-500 border-t border-gray-100 pt-2">
+                ⏱ {report.deadline_recommendation}
+              </p>
+            )}
+
+            {/* Decision buttons */}
+            {!showOverride ? (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Recommendation: {govStyle?.label}</p>
+                <div className="flex gap-2">
+                  {report.decision === "APPROVE_RESOLUTION" ? (
+                    <button
+                      type="button"
+                      onClick={() => onDecision(issue.id, "approve", "APPROVE_RESOLUTION", false)}
+                      disabled={deciding}
+                      className="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      ✓ Accept — Approve & Resolve
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onDecision(issue.id, "reject", report.decision, false)}
+                      disabled={deciding}
+                      className="flex-1 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      {govStyle?.icon} Accept — {govStyle?.label}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowOverride(true)}
+                    disabled={deciding}
+                    className="px-3 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                  >
+                    Override
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-700">Officer Override</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideDecision("approve")}
+                    className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                      overrideDecision === "approve"
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideDecision("reject")}
+                    className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                      overrideDecision === "reject"
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    Return for Rework
+                  </button>
+                </div>
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Reason for overriding AI recommendation (required)"
+                  className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 resize-none h-16 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!overrideReason.trim()) return;
+                      const govDec: GovernanceDecision = overrideDecision === "approve"
+                        ? "APPROVE_RESOLUTION"
+                        : "RETURN_FOR_REWORK";
+                      onDecision(issue.id, overrideDecision, govDec, true, overrideReason);
+                    }}
+                    disabled={deciding || !overrideReason.trim()}
+                    className="flex-1 py-2 bg-gray-900 text-white text-sm font-bold rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  >
+                    {deciding ? "Submitting…" : "Submit Override"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOverride(false); setOverrideReason(""); }}
+                    className="px-4 py-2 text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -895,6 +1138,7 @@ export default function AuthorityPage() {
   const [deptFilter, setDeptFilter] = useState<DepartmentKey | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [generatingGovId, setGeneratingGovId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [selectedIssue, setSelectedIssue] = useState<IssueRecord | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(true);
@@ -989,7 +1233,13 @@ export default function AuthorityPage() {
     }
   }
 
-  async function handleVerifyDecision(issueId: string, decision: "approve" | "reject") {
+  async function handleVerifyDecision(
+    issueId: string,
+    decision: "approve" | "reject",
+    govDecision: GovernanceDecision,
+    isOverride: boolean,
+    overrideReason?: string,
+  ) {
     if (!user) return;
     setDecidingId(issueId);
     try {
@@ -997,7 +1247,12 @@ export default function AuthorityPage() {
       const res = await fetch(`/api/issue/${issueId}/verify-decision`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ decision }),
+        body: JSON.stringify({
+          decision,
+          governance_decision: govDecision,
+          is_override: isOverride,
+          override_reason: overrideReason,
+        }),
       });
       if (res.ok) {
         const data = (await res.json()) as { new_status: string };
@@ -1013,6 +1268,45 @@ export default function AuthorityPage() {
       console.error(e);
     } finally {
       setDecidingId(null);
+    }
+  }
+
+  async function handleGenerateGovernance(issueId: string) {
+    if (!user) return;
+    setGeneratingGovId(issueId);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/issue/${issueId}/governance-review`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          report: GovernanceReport;
+          accountability: AccountabilityReport | null;
+          rework_order: ReworkOrder | null;
+        };
+        setIssues((prev) =>
+          prev.map((issue) =>
+            issue.id === issueId
+              ? {
+                  ...issue,
+                  governance: {
+                    report: data.report,
+                    generated_at: Date.now(),
+                    accountability: data.accountability,
+                    rework_order: data.rework_order,
+                    officer_override: null,
+                  },
+                }
+              : issue,
+          ),
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGeneratingGovId(null);
     }
   }
 
@@ -1160,7 +1454,10 @@ export default function AuthorityPage() {
                 key={issue.id}
                 issue={issue}
                 onDecision={handleVerifyDecision}
+                onGenerateGovernance={handleGenerateGovernance}
                 deciding={decidingId === issue.id}
+                generatingGov={generatingGovId === issue.id}
+                user={user}
               />
             ))}
           </div>

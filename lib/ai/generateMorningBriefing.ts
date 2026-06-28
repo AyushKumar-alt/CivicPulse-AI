@@ -1,6 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import type { IssueIntelligenceReport } from "./types";
 
+export interface BriefingIssueGovernance {
+  report?: {
+    decision?: string;
+    department_performance?: string;
+    completion_quality?: string;
+    accountability_required?: boolean;
+    rework_required?: boolean;
+  } | null;
+  history?: unknown[];
+}
+
 export interface BriefingIssue {
   id: string;
   iir: IssueIntelligenceReport | null;
@@ -11,6 +22,7 @@ export interface BriefingIssue {
   escalated: boolean;
   citizen_concern_level: string | null;
   submitted_at: number | null;
+  governance: BriefingIssueGovernance | null;
 }
 
 export interface BriefingInput {
@@ -92,6 +104,23 @@ function deterministicBriefing(input: BriefingInput): string {
     i.iir?.repair_complexity === "complex" || i.iir?.repair_complexity === "high",
   );
 
+  // ── Governance intelligence ──
+  const accountabilityFlagged = issues.filter(
+    i => i.governance?.report?.accountability_required,
+  );
+  // Departments with repeated accountability flags
+  const deptAccountability = new Map<string, number>();
+  for (const issue of accountabilityFlagged) {
+    const dept = issue.assigned_department_name ?? "Unassigned";
+    deptAccountability.set(dept, (deptAccountability.get(dept) ?? 0) + 1);
+  }
+  const unsatisfactoryDepts = issues.filter(
+    i => i.governance?.report?.department_performance === "unsatisfactory",
+  );
+  const deptNamesUnsatisfactory = [
+    ...new Set(unsatisfactoryDepts.map(i => i.assigned_department_name).filter(Boolean)),
+  ];
+
   // ── SITUATION SUMMARY ──
   const topDept = deptRanked[0];
   const secondDept = deptRanked[1];
@@ -154,6 +183,24 @@ function deterministicBriefing(input: BriefingInput): string {
     );
   }
 
+  // Governance concerns
+  if (accountabilityFlagged.length > 0) {
+    const topDepts = [...deptAccountability.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([dept, count]) => `${dept} (${count} flag${count !== 1 ? "s" : ""})`)
+      .join(", ");
+    concernParts.push(
+      `Governance accountability flags raised for ${accountabilityFlagged.length} issue${accountabilityFlagged.length !== 1 ? "s" : ""} — ${topDepts} — supervisory review required`,
+    );
+  }
+
+  if (deptNamesUnsatisfactory.length > 0) {
+    concernParts.push(
+      `Department performance rated unsatisfactory for ${deptNamesUnsatisfactory.join(", ")} — consider crew reassignment or escalation`,
+    );
+  }
+
   if (concernParts.length === 0) concernParts.push("No major operational concerns identified at this time");
 
   const operationalConcerns = concernParts.join(". ") + ".";
@@ -181,6 +228,12 @@ function deterministicBriefing(input: BriefingInput): string {
   } else if (topDept && topDept.issues.length >= 3) {
     actionParts.push(
       `Direct ${topDept.dept} to submit status update on all ${topDept.issues.length} pending issues — review for resource augmentation`,
+    );
+  }
+
+  if (accountabilityFlagged.length > 0) {
+    actionParts.push(
+      `Address ${accountabilityFlagged.length} governance accountability flag${accountabilityFlagged.length !== 1 ? "s" : ""} — schedule supervisory review meetings with flagged department heads`,
     );
   }
 
@@ -213,14 +266,21 @@ function formatBriefingIssue(issue: BriefingIssue, index: number): string {
     return `[${index + 1}] Unknown issue — ${issue.status} | Dept: ${issue.assigned_department_name ?? "Unassigned"} | ${issue.address ?? "Unknown location"}`;
   }
 
+  const gov = issue.governance?.report;
   const flags = [
     issue.escalated ? "⚡ ESCALATED" : null,
     iir.severity === "critical" ? "🔴 CRITICAL" : null,
     issue.citizen_concern_level === "high" ? "🏘️ HIGH COMMUNITY CONCERN" : null,
     issue.department_status === "needs_rework" ? "↩ NEEDS REWORK" : null,
+    gov?.accountability_required ? "⚠ ACCOUNTABILITY FLAG" : null,
+    gov?.department_performance === "unsatisfactory" ? "✗ DEPT UNDERPERFORMING" : null,
   ]
     .filter(Boolean)
     .join(" ");
+
+  const govLine = gov
+    ? `  Governance: ${gov.decision ?? "pending"} | Dept Performance: ${gov.department_performance ?? "?"} | Quality: ${gov.completion_quality ?? "?"}`
+    : "";
 
   return `[${index + 1}] ${iir.issue_type ?? "Unknown"} — ${iir.severity ?? "?"} severity ${flags ? `| ${flags}` : ""}
   Dept: ${issue.assigned_department_name ?? "Unassigned"} | Stage: ${issue.department_status ?? issue.status}
@@ -229,7 +289,7 @@ function formatBriefingIssue(issue: BriefingIssue, index: number): string {
   Safety: ${iir.safety_risk ?? ""}
   Impact: ${iir.estimated_population_impact ?? ""} | Priority: ${iir.priority_score ?? "?"}/10
   Repair: ${iir.repair_complexity ?? "?"} complexity — ~${iir.estimated_work_hours ?? "?"}h${iir.weather_sensitive ? " | WEATHER SENSITIVE" : ""}
-  Functional: ${iir.functional_importance ?? ""}`;
+  Functional: ${iir.functional_importance ?? ""}${govLine ? `\n${govLine}` : ""}`;
 }
 
 // ── Main export ──────────────────────────────────────────────────────────────
