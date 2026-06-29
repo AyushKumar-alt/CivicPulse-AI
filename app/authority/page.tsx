@@ -15,6 +15,8 @@ import { DEPARTMENT_LIST, getDepartmentByKey } from "@/lib/departments";
 import type { DepartmentKey } from "@/lib/departments";
 import { getGreeting } from "@/lib/time/getGreeting";
 import type { GovernanceDecision, GovernanceReport, ReworkOrder, AccountabilityReport } from "@/lib/ai/generateGovernanceReview";
+import { generateGovernanceReviewClient } from "@/lib/ai/generateGovernanceReviewClient";
+import type { IssueIntelligenceReport } from "@/lib/ai/types";
 import { collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
@@ -90,6 +92,16 @@ interface IssueRecord {
     notes: string | null;
     updated_by: string;
   }[];
+  action_plan?: {
+    crew_required: string;
+    estimated_workers: number;
+    estimated_duration: string;
+    repair_steps: string[];
+    traffic_management: string;
+    safety_protocols: string[];
+    expected_completion: string;
+    reasoning?: string;
+  } | null;
   verification?: {
     confidence: number;
     recommendation: "approve" | "needs_inspection" | "needs_rework";
@@ -1390,34 +1402,64 @@ export default function AuthorityPage() {
     if (!user) return;
     setGeneratingGovId(issueId);
     try {
-      // Governance review requires server-side AI — currently running client-side is not supported.
-      // Stub: silently skip so the button shows a loading state then stops.
-      await new Promise((r) => setTimeout(r, 800));
-      if (false) {
-        const data = (await Promise.resolve()) as unknown as {
-          report: GovernanceReport;
-          accountability: AccountabilityReport | null;
-          rework_order: ReworkOrder | null;
-        };
-        setIssues((prev) =>
-          prev.map((issue) =>
-            issue.id === issueId
-              ? {
-                  ...issue,
-                  governance: {
-                    report: data.report,
-                    generated_at: Date.now(),
-                    accountability: data.accountability,
-                    rework_order: data.rework_order,
-                    officer_override: null,
-                  },
-                }
-              : issue,
-          ),
-        );
-      }
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue) return;
+
+      const iir = issue.ai as unknown as IssueIntelligenceReport;
+      const actionPlan = issue.action_plan
+        ? {
+            crew_required: issue.action_plan.crew_required,
+            estimated_workers: issue.action_plan.estimated_workers,
+            estimated_duration: issue.action_plan.estimated_duration,
+            repair_steps: issue.action_plan.repair_steps,
+            traffic_management: issue.action_plan.traffic_management,
+            safety_protocols: issue.action_plan.safety_protocols,
+            expected_completion: issue.action_plan.expected_completion,
+          }
+        : null;
+      const verif = issue.verification
+        ? {
+            confidence: issue.verification.confidence,
+            recommendation: issue.verification.recommendation,
+            was_issue_addressed: false,
+            reasoning: issue.verification.reasoning,
+            concerns: issue.verification.concerns,
+            remaining_issues: null,
+          }
+        : null;
+
+      const result = await generateGovernanceReviewClient({
+        iir,
+        actionPlan,
+        verification: verif,
+        departmentName: issue.assigned_department_name ?? "Municipal Department",
+        departmentProgress: (issue.department_progress ?? []) as { stage: string; timestamp: unknown; notes: string | null; updated_by: string }[],
+        address: issue.location?.address ?? null,
+      });
+
+      const now = Timestamp.now();
+      const governanceData = {
+        report: result.report,
+        generated_at: now,
+        accountability: result.accountability,
+        rework_order: result.rework_order,
+        officer_override: null,
+      };
+
+      await updateDoc(doc(db, "issues", issueId), {
+        governance: governanceData,
+        updated_at: now,
+      });
+
+      setIssues((prev) =>
+        prev.map((i) =>
+          i.id === issueId
+            ? { ...i, governance: { ...governanceData, generated_at: Date.now() } }
+            : i,
+        ),
+      );
     } catch (e) {
-      console.error(e);
+      console.error("[GovernanceReview] Failed:", e);
     } finally {
       setGeneratingGovId(null);
     }

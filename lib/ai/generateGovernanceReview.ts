@@ -348,8 +348,8 @@ function deterministicGovernanceReview(input: GovernanceInput): GovernanceOutput
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-export async function generateGovernanceReview(input: GovernanceInput): Promise<GovernanceOutput> {
-  const apiKey = process.env.GEMINI_API_KEY;
+export async function generateGovernanceReview(input: GovernanceInput, _keyOverride?: string): Promise<GovernanceOutput> {
+  const apiKey = _keyOverride ?? process.env.GEMINI_API_KEY;
   if (!apiKey) return deterministicGovernanceReview(input);
 
   const { iir, verification: v, actionPlan, departmentName, departmentProgress, address } = input;
