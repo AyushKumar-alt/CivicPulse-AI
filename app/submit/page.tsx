@@ -79,36 +79,58 @@ export default function SubmitPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  function applyPosition(coords: GeolocationCoordinates) {
+    const lat = coords.latitude;
+    const lng = coords.longitude;
+    setLocation({ lat, lng });
+    setLocationLabel(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    reverseGeocode(lat, lng)
+      .then((geo) => {
+        if (geo) {
+          setLocationAddress(geo.address);
+          setLocationZone(geo.zone_type ?? null);
+        }
+      })
+      .catch(() => {});
+  }
+
   function handleGetLocation() {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
       return;
     }
     setGeoLoading(true);
+    setLocationAddress(null);
+    setLocationZone(null);
+
+    // Stage 1 — fast fix using cell/WiFi (returns in < 1s on mobile)
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const lat = coords.latitude;
-        const lng = coords.longitude;
-        setLocation({ lat, lng });
-        setLocationLabel(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-        setLocationAddress(null);
-        setLocationZone(null);
+        applyPosition(coords);
         setGeoLoading(false);
-
-        // Best-effort client-side geocode for address preview
-        reverseGeocode(lat, lng)
-          .then((geo) => {
-            if (geo) {
-              setLocationAddress(geo.address);
-              setLocationZone(geo.zone_type ?? null);
-            }
-          })
-          .catch(() => {/* silently ignore — coords still work */});
+        // Stage 2 — silently refine with GPS in background (higher accuracy, no waiting)
+        navigator.geolocation.getCurrentPosition(
+          ({ coords: precise }) => applyPosition(precise),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        );
       },
       () => {
-        setError("Could not get your location. Please try again.");
-        setGeoLoading(false);
-      }
+        // Fast fix failed — fall back to GPS directly
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            applyPosition(coords);
+            setGeoLoading(false);
+          },
+          () => {
+            setError("Could not get your location. Please allow location access and try again.");
+            setGeoLoading(false);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        );
+      },
+      // Low accuracy, accept cached position up to 30s old — very fast
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 },
     );
   }
 
@@ -236,16 +258,15 @@ export default function SubmitPage() {
               </div>
             )}
 
-            {/* Camera input — opens rear camera directly on mobile */}
+            {/* Both inputs use accept="image/*" without capture — avoids iOS Safari page-reload bug.
+                The OS native sheet shows "Take Photo" + "Gallery" options automatically. */}
             <input
               ref={cameraInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleImageChange}
               className="hidden"
             />
-            {/* Gallery / file picker input */}
             <input
               ref={fileInputRef}
               type="file"

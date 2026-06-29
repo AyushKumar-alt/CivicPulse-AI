@@ -1065,9 +1065,8 @@ function IssueDetailModal({
                           <p className="text-2xl mb-1">🖼️</p>
                           <p className="text-xs font-semibold text-gray-600">Gallery</p>
                         </button>
-                        {/* Camera — opens rear camera directly */}
-                        <input ref={afterCameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleAfterImageUpload} />
-                        {/* Gallery / file picker */}
+                        {/* No capture attribute — avoids iOS Safari page-reload bug */}
+                        <input ref={afterCameraRef} type="file" accept="image/*" className="sr-only" onChange={handleAfterImageUpload} />
                         <input ref={afterGalleryRef} type="file" accept="image/*" className="sr-only" onChange={handleAfterImageUpload} />
                       </div>
                     )}
