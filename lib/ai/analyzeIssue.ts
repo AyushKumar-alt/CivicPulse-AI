@@ -232,7 +232,18 @@ function extractJson(text: string): string {
   return text.slice(start, end + 1);
 }
 
+function isDailyQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("free_tier_requests") ||
+    msg.includes("quota") ||
+    (msg.includes("429") && msg.includes("limit"))
+  );
+}
+
 function isRetryable(err: unknown): boolean {
+  if (isDailyQuotaError(err)) return false; // quota exhausted — retrying is pointless
   if (err instanceof SyntaxError) return true;
   const msg = err instanceof Error ? err.message : String(err);
   return (
@@ -242,6 +253,86 @@ function isRetryable(err: unknown): boolean {
     msg.includes("high demand") ||
     msg.includes("Service Unavailable")
   );
+}
+
+// ── Deterministic fallback ───────────────────────────────────────────────────
+
+function deterministicAnalysis(description: string): AiResult {
+  const text = description.toLowerCase();
+
+  let issue_type = "Infrastructure Issue";
+  let responsible_authority: AiResult["responsible_authority"] = "Public Works Department";
+  let repair_category: AiResult["repair_category"] = "other";
+
+  if (/pothole|road|crack|pavement|footpath|kerb|tar|asphalt|concrete|surface/i.test(text)) {
+    issue_type = "Road Damage";
+    responsible_authority = "Roads & Highways Division";
+    repair_category = "patching";
+  } else if (/water|pipe|leak|sewage|sewer|drain|flood|waterlog|manhole|gutter/i.test(text)) {
+    issue_type = /sewer|sewage/.test(text) ? "Sewage Leak" : /flood|waterlog/.test(text) ? "Waterlogging" : "Water Pipe Leak";
+    responsible_authority = "Water Supply & Sewerage (CMWSSB)";
+    repair_category = /flood|waterlog/.test(text) ? "drainage" : "utility_repair";
+  } else if (/light|streetlight|electric|power|wire|transformer|voltage/i.test(text)) {
+    issue_type = "Electrical Issue";
+    responsible_authority = "Electricity Distribution";
+    repair_category = "electrical";
+  } else if (/garbage|waste|trash|litter|dump|rubbish|bin/i.test(text)) {
+    issue_type = "Garbage Dump";
+    responsible_authority = "Solid Waste & Sanitation";
+    repair_category = "clearing";
+  } else if (/traffic|signal|sign|marking|junction/i.test(text)) {
+    issue_type = "Traffic Signal Fault";
+    responsible_authority = "Traffic Management";
+    repair_category = "signage";
+  }
+
+  let severity: AiResult["severity"] = "medium";
+  if (/critical|emergency|danger|urgent|collapse|dead|injur|accident|fire|electr/i.test(text)) {
+    severity = "critical";
+  } else if (/large|major|serious|significant|broken|bust|overflow|flood/i.test(text)) {
+    severity = "high";
+  } else if (/minor|small|little|slight|crack/i.test(text)) {
+    severity = "low";
+  }
+
+  const priorityMap: Record<AiResult["severity"], number> = { critical: 9, high: 7, medium: 5, low: 3 };
+  const impactMap: Record<AiResult["severity"], number> = { critical: 8, high: 6, medium: 4, low: 2 };
+
+  return {
+    issue_type,
+    severity,
+    confidence: 0.5,
+    summary: description.slice(0, 200) || "Issue reported by citizen. Gemini analysis unavailable — deterministic fallback used.",
+    safety_risk: severity === "critical" || severity === "high"
+      ? "Potential hazard to public safety. Manual inspection recommended."
+      : "Low immediate safety risk. Monitor and schedule routine repair.",
+    responsible_authority,
+    area_category: "Residential Area",
+    area_confidence: 0.3,
+    area_reasoning: "Area classification unavailable without AI image analysis.",
+    affected_entity_type: null,
+    functional_importance: "Standard community area.",
+    likely_daily_activity: "General community activity.",
+    affected_groups: ["Residents", "Commuters"],
+    estimated_population_impact: "~100 residents",
+    impact_score: impactMap[severity],
+    impact_reasoning: "Impact estimated from reported severity. Full AI analysis unavailable.",
+    priority_score: priorityMap[severity],
+    priority_reasoning: "Priority assigned from severity keywords. Full AI analysis unavailable.",
+    context_used: false,
+    context_influence: "none",
+    repair_complexity: severity === "critical" ? "complex" : severity === "high" ? "high" : "medium",
+    repair_category,
+    estimated_work_hours: severity === "critical" ? 16 : severity === "high" ? 8 : 4,
+    weather_sensitive: false,
+    inspection_required: severity === "critical" || severity === "high",
+    temporary_public_safety_required: severity === "critical",
+    required_equipment: [],
+    required_skills: [],
+    operational_constraints: [],
+    verification_checkpoints: ["Visual inspection confirms issue is resolved"],
+    routing_reasoning: `Assigned to ${responsible_authority} based on issue type keywords in the description.`,
+  };
 }
 
 async function callWithRetry<T>(fn: () => Promise<T>, issueId: string): Promise<T> {
@@ -368,29 +459,39 @@ export async function analyzeIssue(issueId: string): Promise<void> {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const aiResult = await callWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { data: imageBase64, mimeType } },
-              { text: prompt },
-            ],
-          },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          temperature: 0.1,
-          maxOutputTokens: 4096,
-        },
-      });
+    let aiResult: AiResult;
+    let usedFallback = false;
 
-      const rawText = (response.text ?? "").trim();
-      const jsonText = extractJson(rawText);
-      return JSON.parse(jsonText) as AiResult;
-    }, issueId);
+    try {
+      aiResult = await callWithRetry(async () => {
+        const response = await ai.models.generateContent({
+          model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { inlineData: { data: imageBase64, mimeType } },
+                { text: prompt },
+              ],
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+          },
+        });
+
+        const rawText = (response.text ?? "").trim();
+        const jsonText = extractJson(rawText);
+        return JSON.parse(jsonText) as AiResult;
+      }, issueId);
+    } catch (geminiErr) {
+      const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+      console.warn(`[${issueId}] Gemini failed (${msg.slice(0, 80)}), using deterministic fallback.`);
+      aiResult = deterministicAnalysis(description.trim());
+      usedFallback = true;
+    }
 
     // ── Validate & sanitise ────────────────────────────────────────────────
 
@@ -483,6 +584,9 @@ export async function analyzeIssue(issueId: string): Promise<void> {
         context_used: aiResult.context_used,
         context_influence: aiResult.context_influence,
         generated_at: Timestamp.now(),
+
+        // Whether Gemini or deterministic fallback was used
+        ai_fallback: usedFallback,
 
         // Repair intelligence — consumed by downstream agents
         repair_complexity: aiResult.repair_complexity,
