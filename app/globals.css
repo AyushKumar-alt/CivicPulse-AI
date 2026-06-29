@@ -12,15 +12,70 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Dark mode ────────────────────────────────────────────────────────────────
+   Override common Tailwind neutral utilities when .dark is on <html>.
+   Higher specificity (.dark .utility) wins over single-class utilities.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.dark body,
+.dark .bg-white    { background-color: #1e293b !important; }
+.dark .bg-gray-50  { background-color: #0f172a !important; }
+.dark .bg-gray-100 { background-color: #1e293b !important; }
+.dark .bg-gray-200 { background-color: #334155 !important; }
+.dark .bg-gray-800 { background-color: #0f172a !important; }
+.dark .bg-gray-900 { background-color: #0f172a !important; }
+
+.dark .text-white      { color: #f8fafc !important; }
+.dark .text-gray-900   { color: #f1f5f9 !important; }
+.dark .text-gray-800   { color: #e2e8f0 !important; }
+.dark .text-gray-700   { color: #cbd5e1 !important; }
+.dark .text-gray-600   { color: #94a3b8 !important; }
+.dark .text-gray-500   { color: #64748b !important; }
+.dark .text-gray-400   { color: #475569 !important; }
+
+.dark .border-gray-100 { border-color: #334155 !important; }
+.dark .border-gray-200 { border-color: #334155 !important; }
+.dark .border-gray-300 { border-color: #475569 !important; }
+
+/* Light-tint status/info backgrounds */
+.dark .bg-blue-50   { background-color: #0f2044 !important; }
+.dark .bg-green-50  { background-color: #052e16 !important; }
+.dark .bg-red-50    { background-color: #3f0a0a !important; }
+.dark .bg-orange-50 { background-color: #3c1007 !important; }
+.dark .bg-yellow-50 { background-color: #3b1f03 !important; }
+.dark .bg-sky-50    { background-color: #082536 !important; }
+.dark .bg-indigo-50 { background-color: #1e1b4b !important; }
+.dark .bg-teal-50   { background-color: #042f2e !important; }
+.dark .bg-purple-50 { background-color: #2e1065 !important; }
+.dark .bg-amber-50  { background-color: #3b1c08 !important; }
+
+.dark .border-blue-200   { border-color: #1d4ed8 !important; }
+.dark .border-green-200  { border-color: #166534 !important; }
+.dark .border-red-200    { border-color: #991b1b !important; }
+.dark .border-orange-200 { border-color: #9a3412 !important; }
+.dark .border-yellow-200 { border-color: #854d0e !important; }
+.dark .border-indigo-100 { border-color: #3730a3 !important; }
+
+/* Form inputs */
+.dark input:not([type="range"]),
+.dark textarea,
+.dark select {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b !important; }
+
+/* Ring focus */
+.dark .ring-blue-500 { --tw-ring-color: #3b82f6; }
+
+/* Divider lines */
+.dark .divide-gray-100 > * + * { border-color: #334155 !important; }
+.dark .divide-gray-200 > * + * { border-color: #475569 !important; }
