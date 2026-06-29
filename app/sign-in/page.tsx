@@ -3,24 +3,60 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/lib/firebase/auth";
+import { signIn, createAccount } from "@/lib/firebase/auth";
 
 export default function SignInPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     setError("");
+
+    if (mode === "signup") {
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      await signIn(email, password);
+      if (mode === "signup") {
+        await createAccount(email, password);
+      } else {
+        await signIn(email, password);
+      }
       const authorityEmail = process.env.NEXT_PUBLIC_AUTHORITY_EMAIL ?? "";
-      router.push(authorityEmail && email === authorityEmail ? "/authority" : "/dashboard");
-    } catch {
-      setError("Invalid email or password. Please try again.");
+      const commandCenterEmail = process.env.NEXT_PUBLIC_COMMANDCENTER_EMAIL ?? "";
+      if (authorityEmail && email === authorityEmail) {
+        router.push("/authority");
+      } else if (commandCenterEmail && email === commandCenterEmail) {
+        router.push("/authority");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("email-already-in-use")) {
+        setError("An account with this email already exists. Sign in instead.");
+      } else if (msg.includes("invalid-email")) {
+        setError("Invalid email address.");
+      } else if (msg.includes("wrong-password") || msg.includes("invalid-credential")) {
+        setError("Invalid email or password. Please try again.");
+      } else if (msg.includes("user-not-found")) {
+        setError("No account found with this email. Create one instead.");
+      } else {
+        setError(mode === "signup" ? "Failed to create account. Try again." : "Invalid email or password. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -37,46 +73,59 @@ export default function SignInPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="mb-6">
-            <h1 className="text-xl font-semibold text-gray-900">Sign in</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {mode === "signin" ? "Sign in" : "Create account"}
+            </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Use your demo account or create one in Firebase Console.
+              {mode === "signin"
+                ? "Sign in to report or track community issues."
+                : "Join as a citizen to report community issues."}
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="citizen@demo.com"
+                placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                onKeyDown={(e) => e.key === "Enter" && mode === "signin" && handleSubmit()}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
 
+            {mode === "signup" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                {error}
-              </p>
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
             )}
 
             <button
@@ -85,8 +134,36 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading
+                ? mode === "signup" ? "Creating account..." : "Signing in..."
+                : mode === "signup" ? "Create Account" : "Sign in"}
             </button>
+
+            <p className="text-center text-sm text-gray-500">
+              {mode === "signin" ? (
+                <>
+                  Don&apos;t have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setMode("signup"); setError(""); }}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    Create one
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setMode("signin"); setError(""); }}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    Sign in
+                  </button>
+                </>
+              )}
+            </p>
           </div>
         </div>
       </div>

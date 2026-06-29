@@ -1,5 +1,6 @@
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User,
@@ -9,6 +10,9 @@ import { auth } from "./client";
 
 export const signIn = (email: string, password: string) =>
   signInWithEmailAndPassword(auth, email, password);
+
+export const createAccount = (email: string, password: string) =>
+  createUserWithEmailAndPassword(auth, email, password);
 
 export const logout = () => signOut(auth);
 
