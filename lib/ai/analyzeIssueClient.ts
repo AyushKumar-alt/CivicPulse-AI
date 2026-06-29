@@ -3,6 +3,7 @@ import { Timestamp, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { reverseGeocode, type GeocodedLocation } from "@/lib/geocode";
 import { mapToDepartment } from "@/lib/departments";
+import { getRegionalAuthorities, type RegionalAuthorities } from "@/lib/municipal-authorities";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,14 @@ function detectLandmarkCategory(address: string, areaName: string): string | nul
   return null;
 }
 
-function buildPrompt(description: string, lat: number, lng: number, geo: GeocodedLocation | null, contextHint: string | null): string {
+function buildPrompt(
+  description: string,
+  lat: number,
+  lng: number,
+  geo: GeocodedLocation | null,
+  contextHint: string | null,
+  authorities: RegionalAuthorities,
+): string {
   const detectedCategory = detectLandmarkCategory(geo?.address ?? "", geo?.area_name ?? "");
   const locationLines = geo
     ? [
@@ -96,7 +104,16 @@ function buildPrompt(description: string, lat: number, lng: number, geo: Geocode
     ? `\nCITIZEN-PROVIDED CONTEXT HINT: "${contextHint}"\nNOTE: This is optional user-provided context. The address and detected landmark above are stronger signals.`
     : `\nNo additional context hint was provided by the citizen.`;
 
-  return `You are a civic issue analysis agent for Community Hero AI, a municipal operations platform.
+  const authorityOptions = [
+    authorities.roads,
+    authorities.water,
+    authorities.electricity,
+    authorities.sanitation,
+    authorities.traffic,
+    authorities.publicworks,
+  ].join(" | ");
+
+  return `You are a civic issue analysis agent for Community Hero AI, a municipal operations platform serving ${authorities.cityLabel}.
 
 A citizen has submitted a photo of a community infrastructure problem.
 
@@ -106,6 +123,14 @@ REPORTER DESCRIPTION: "${description}"
 ${locationLines}
 ${contextSection}
 
+LOCAL MUNICIPAL AUTHORITIES for this region (use these exact names in responsible_authority):
+- Roads & Highways: ${authorities.roads}
+- Water & Sewerage: ${authorities.water}
+- Electricity: ${authorities.electricity}
+- Solid Waste: ${authorities.sanitation}
+- Traffic: ${authorities.traffic}
+- Public Works: ${authorities.publicworks}
+
 Return a JSON object with ALL of the following fields:
 
 {
@@ -114,7 +139,7 @@ Return a JSON object with ALL of the following fields:
   "confidence": 0.0 to 1.0,
   "summary": "2-3 sentences describing the issue for a municipal authority",
   "safety_risk": "one sentence describing the public safety risk if unaddressed",
-  "responsible_authority": "MUST be exactly one of: Roads & Highways Division | Water Supply & Sewerage (CMWSSB) | Electricity Distribution | Solid Waste & Sanitation | Traffic Management | Public Works Department",
+  "responsible_authority": "MUST be exactly one of: ${authorityOptions}",
   "area_category": "one of: Residential Area | Commercial Area | IT & Research District | Educational Campus | Healthcare Zone | Industrial Estate | Transport Hub | Government Zone | Mixed Use Area",
   "area_confidence": 0.0 to 1.0,
   "area_reasoning": "1-2 sentences explaining why you classified this area functionally",
@@ -278,7 +303,8 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     }
 
     const geo = await reverseGeocode(lat, lng);
-    const prompt = buildPrompt(description.trim() || "No description provided.", lat, lng, geo, contextHint ?? null);
+    const authorities = getRegionalAuthorities(geo?.city ?? "", geo?.state ?? "");
+    const prompt = buildPrompt(description.trim() || "No description provided.", lat, lng, geo, contextHint ?? null, authorities);
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     let aiResult: AiResult;
@@ -316,6 +342,15 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     }
 
     // Validate and sanitise
+    // If Gemini returned an unrecognised authority, default to publicworks
+    const validAuthorities = new Set([
+      authorities.roads, authorities.water, authorities.electricity,
+      authorities.sanitation, authorities.traffic, authorities.publicworks,
+    ]);
+    if (!validAuthorities.has(aiResult.responsible_authority)) {
+      aiResult.responsible_authority = authorities.publicworks;
+    }
+
     if (!VALID_SEVERITIES.has(aiResult.severity)) aiResult.severity = "medium";
     aiResult.confidence = Math.min(1, Math.max(0, Number(aiResult.confidence) || 0));
     if (!VALID_AREA_CATEGORIES.has(aiResult.area_category)) aiResult.area_category = "Mixed Use Area";

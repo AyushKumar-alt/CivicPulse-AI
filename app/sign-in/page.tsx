@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, createAccount, resetPassword } from "@/lib/firebase/auth";
 
+type RoleType = "citizen" | "command" | "department";
+type FormMode = "signin" | "signup" | "reset";
+
 function EyeIcon({ open }: { open: boolean }) {
   if (open) return (
     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -56,9 +59,34 @@ function PasswordInput({
   );
 }
 
+const ROLES: { id: RoleType; icon: string; label: string; description: string; color: string }[] = [
+  {
+    id: "citizen",
+    icon: "🏘️",
+    label: "Citizen",
+    description: "Report and track community issues",
+    color: "border-blue-200 hover:border-blue-400 hover:bg-blue-50",
+  },
+  {
+    id: "command",
+    icon: "🏛️",
+    label: "Command Centre",
+    description: "Municipal operations dashboard",
+    color: "border-purple-200 hover:border-purple-400 hover:bg-purple-50",
+  },
+  {
+    id: "department",
+    icon: "🏗️",
+    label: "Department",
+    description: "Field crew & repair management",
+    color: "border-orange-200 hover:border-orange-400 hover:bg-orange-50",
+  },
+];
+
 export default function SignInPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
+  const [role, setRole] = useState<RoleType | null>(null);
+  const [mode, setMode] = useState<FormMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -66,18 +94,33 @@ export default function SignInPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function selectRole(r: RoleType) {
+    setRole(r);
+    setMode("signin");
+    setError("");
+    setSuccess("");
+  }
+
+  function goBack() {
+    if (mode !== "signin") {
+      setMode("signin");
+      setError("");
+    } else {
+      setRole(null);
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setError("");
+      setSuccess("");
+    }
+  }
+
   async function handleSubmit() {
     setError("");
 
     if (mode === "signup") {
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
+      if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+      if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     }
 
     setLoading(true);
@@ -95,9 +138,7 @@ export default function SignInPage() {
       }
       const authorityEmail = process.env.NEXT_PUBLIC_AUTHORITY_EMAIL ?? "";
       const commandCenterEmail = process.env.NEXT_PUBLIC_COMMANDCENTER_EMAIL ?? "";
-      if (authorityEmail && email === authorityEmail) {
-        router.push("/authority");
-      } else if (commandCenterEmail && email === commandCenterEmail) {
+      if ((authorityEmail && email === authorityEmail) || (commandCenterEmail && email === commandCenterEmail)) {
         router.push("/authority");
       } else {
         router.push("/dashboard");
@@ -120,6 +161,66 @@ export default function SignInPage() {
     }
   }
 
+  // ── Role picker ─────────────────────────────────────────────────────────
+
+  if (!role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              ← Community Hero AI
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <div className="mb-6 text-center">
+              <h1 className="text-xl font-semibold text-gray-900">Welcome back</h1>
+              <p className="mt-1 text-sm text-gray-500">Select your role to continue</p>
+            </div>
+
+            <div className="space-y-3">
+              {ROLES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => selectRole(r.id)}
+                  className={`w-full flex items-center gap-4 rounded-xl border-2 px-4 py-4 text-left transition-all duration-150 ${r.color}`}
+                >
+                  <span className="text-2xl shrink-0">{r.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{r.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>
+                  </div>
+                  <svg className="ml-auto shrink-0 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Sign-in form ─────────────────────────────────────────────────────────
+
+  const selectedRole = ROLES.find((r) => r.id === role)!;
+  const isCitizen = role === "citizen";
+
+  const title =
+    mode === "signup" ? "Create citizen account"
+    : mode === "reset" ? "Reset password"
+    : `Sign in as ${selectedRole.label}`;
+
+  const subtitle =
+    mode === "signup" ? "Join as a citizen to report community issues."
+    : mode === "reset" ? "Enter your email and we'll send a reset link."
+    : role === "citizen" ? "Sign in to report or track community issues."
+    : role === "command" ? "Access the municipal operations dashboard."
+    : "Access your department's repair management portal.";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
@@ -130,17 +231,25 @@ export default function SignInPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          {/* Role badge + back */}
+          <div className="flex items-center gap-2 mb-5">
+            <button
+              type="button"
+              onClick={goBack}
+              className="text-gray-400 hover:text-gray-700 transition-colors"
+              aria-label="Back"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="text-base">{selectedRole.icon}</span>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{selectedRole.label}</span>
+          </div>
+
           <div className="mb-6">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Reset password"}
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {mode === "signin"
-                ? "Sign in to report or track community issues."
-                : mode === "signup"
-                ? "Join as a citizen to report community issues."
-                : "Enter your email and we'll send a reset link."}
-            </p>
+            <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
           </div>
 
           <div className="space-y-4">
@@ -153,7 +262,11 @@ export default function SignInPage() {
                 autoComplete="email"
                 onKeyDown={(e) => e.key === "Enter" && mode === "reset" && handleSubmit()}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
+                placeholder={
+                  role === "command" ? "commandcentre@demo.com"
+                  : role === "department" ? "dept@demo.com"
+                  : "you@example.com"
+                }
               />
             </div>
 
@@ -181,13 +294,8 @@ export default function SignInPage() {
               </div>
             )}
 
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
-            )}
-
-            {success && (
-              <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">{success}</p>
-            )}
+            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+            {success && <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">{success}</p>}
 
             <button
               type="button"
@@ -196,23 +304,25 @@ export default function SignInPage() {
               className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading
-                ? mode === "signup" ? "Creating account..." : mode === "reset" ? "Sending..." : "Signing in..."
-                : mode === "signup" ? "Create Account" : mode === "reset" ? "Send Reset Email" : "Sign in"}
+                ? (mode === "signup" ? "Creating account..." : mode === "reset" ? "Sending..." : "Signing in...")
+                : (mode === "signup" ? "Create Account" : mode === "reset" ? "Send Reset Email" : "Sign in")}
             </button>
 
             <div className="space-y-2 text-center">
               {mode === "signin" && (
                 <>
-                  <p className="text-sm text-gray-500">
-                    Don&apos;t have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      Create one
-                    </button>
-                  </p>
+                  {isCitizen && (
+                    <p className="text-sm text-gray-500">
+                      Don&apos;t have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        Create one
+                      </button>
+                    </p>
+                  )}
                   <p className="text-sm text-gray-500">
                     Forgot password?{" "}
                     <button
