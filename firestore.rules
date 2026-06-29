@@ -40,7 +40,7 @@ service cloud.firestore {
           "assigned_at", "assigned_by", "assignment_method", "location"
         ]);
 
-      allow delete: if false;
+      allow delete: if request.auth.token.role == "commandcenter";
 
       match /confirmations/{uid} {
         allow read: if request.auth != null;

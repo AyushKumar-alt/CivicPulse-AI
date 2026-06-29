@@ -15,7 +15,7 @@ import { DEPARTMENT_LIST, getDepartmentByKey } from "@/lib/departments";
 import type { DepartmentKey } from "@/lib/departments";
 import { getGreeting } from "@/lib/time/getGreeting";
 import type { GovernanceDecision, GovernanceReport, ReworkOrder, AccountabilityReport } from "@/lib/ai/generateGovernanceReview";
-import { collection, getDocs, doc, updateDoc, orderBy, query, arrayUnion, Timestamp } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
 const IssueMap = dynamic(() => import("@/components/IssueMap"), {
@@ -443,11 +443,15 @@ function IssueDetailModal({
   onClose,
   onStatusChange,
   updating,
+  onDelete,
+  deleting,
 }: {
   issue: IssueRecord;
   onClose: () => void;
   onStatusChange: (id: string, status: string) => void;
   updating: boolean;
+  onDelete?: (id: string) => void;
+  deleting?: boolean;
 }) {
   const loc = issue.location;
   const brief = issue.escalation_brief;
@@ -466,13 +470,39 @@ function IssueDetailModal({
           <p className="font-semibold text-sm text-gray-900 truncate mr-4">
             {issue.ai?.issue_type ?? "Issue Details"}
           </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Delete this issue permanently? This cannot be undone.")) {
+                    onDelete(issue.id);
+                  }
+                }}
+                disabled={deleting}
+                className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-40 transition-colors font-medium"
+              >
+                {deleting ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                )}
+                Delete
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4">
@@ -987,11 +1017,15 @@ function IssueCard({
   onStatusChange,
   updating,
   onViewDetails,
+  onDelete,
+  deleting,
 }: {
   issue: IssueRecord;
   onStatusChange: (id: string, status: string) => void;
   updating: boolean;
   onViewDetails: (issue: IssueRecord) => void;
+  onDelete?: (id: string) => void;
+  deleting?: boolean;
 }) {
   const submittedAt = issue.submitted_at
     ? new Date(issue.submitted_at).toLocaleString()
@@ -1120,6 +1154,30 @@ function IssueCard({
               <option value="resolved">Resolved</option>
               <option value="rejected">Rejected</option>
             </select>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Delete this issue permanently? This cannot be undone.")) {
+                    onDelete(issue.id);
+                  }
+                }}
+                disabled={deleting}
+                title="Delete issue"
+                className="p-1 text-gray-300 hover:text-red-500 disabled:opacity-40 transition-colors"
+              >
+                {deleting ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1139,6 +1197,7 @@ export default function AuthorityPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [deptFilter, setDeptFilter] = useState<DepartmentKey | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [generatingGovId, setGeneratingGovId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -1254,6 +1313,21 @@ export default function AuthorityPage() {
       console.error(e);
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  async function handleDeleteIssue(issueId: string) {
+    if (!user) return;
+    setDeletingId(issueId);
+    try {
+      await deleteDoc(doc(db, "issues", issueId));
+      setIssues((prev) => prev.filter((issue) => issue.id !== issueId));
+      if (selectedIssue?.id === issueId) setSelectedIssue(null);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to delete issue. Check Firestore permissions.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -1509,6 +1583,8 @@ export default function AuthorityPage() {
                 onStatusChange={handleStatusChange}
                 updating={updatingId === issue.id}
                 onViewDetails={setSelectedIssue}
+                onDelete={roleInfo.role === "commandcenter" ? handleDeleteIssue : undefined}
+                deleting={deletingId === issue.id}
               />
             ))}
           </div>
@@ -1522,6 +1598,8 @@ export default function AuthorityPage() {
           onClose={() => setSelectedIssue(null)}
           onStatusChange={handleStatusChange}
           updating={updatingId === selectedIssue.id}
+          onDelete={roleInfo.role === "commandcenter" ? handleDeleteIssue : undefined}
+          deleting={deletingId === selectedIssue.id}
         />
       )}
     </div>
