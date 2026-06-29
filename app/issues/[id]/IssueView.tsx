@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase/client";
 import { hasUserConfirmed } from "@/lib/firebase/firestore";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useUserRole } from "@/lib/hooks/useUserRole";
+import { analyzeIssueClient } from "@/lib/ai/analyzeIssueClient";
 
 const IssueMap = dynamic(() => import("@/components/IssueMap"), {
   ssr: false,
@@ -197,6 +198,7 @@ export default function IssueView({ id }: { id: string }) {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
   const hasCheckedConfirm = useRef(false);
+  const hasTriggeredAnalysis = useRef(false);
 
   // Comments state
   const [comments, setComments] = useState<CommentRecord[]>([]);
@@ -216,6 +218,24 @@ export default function IssueView({ id }: { id: string }) {
     );
     return unsubscribe;
   }, [id]);
+
+  // Re-trigger analysis client-side for any issue stuck in "processing"
+  // (covers issues submitted with old code, or where submit-page analysis was lost)
+  useEffect(() => {
+    if (hasTriggeredAnalysis.current || !issue || !user || issue.status !== "processing") return;
+    if (issue.reporter_uid !== user.uid) return; // only reporter can write AI fields
+    hasTriggeredAnalysis.current = true;
+    const loc = issue.location;
+    if (!loc) return;
+    analyzeIssueClient({
+      issueId: id,
+      imageUrl: issue.image_url,
+      description: issue.raw_description ?? "",
+      lat: loc.lat,
+      lng: loc.lng,
+      contextHint: issue.context_hint ?? null,
+    }).catch(console.error);
+  }, [id, issue, user]);
 
   useEffect(() => {
     if (hasCheckedConfirm.current || !user || !issue || issue.status === "processing") return;

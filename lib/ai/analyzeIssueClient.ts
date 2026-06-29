@@ -239,8 +239,9 @@ async function callWithRetry<T>(fn: () => Promise<T>, label: string): Promise<T>
 
 export interface AnalyzeClientParams {
   issueId: string;
-  imageBase64: string;
-  imageMimeType: string;
+  imageBase64?: string;   // Available when triggered from submit page (image already in memory)
+  imageUrl?: string;      // Fallback: fetch from URL (used when re-triggering from issue detail page)
+  imageMimeType?: string;
   description: string;
   lat: number;
   lng: number;
@@ -248,20 +249,43 @@ export interface AnalyzeClientParams {
 }
 
 export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<void> {
-  const { issueId, imageBase64, imageMimeType, description, lat, lng, contextHint } = params;
+  const { issueId, description, lat, lng, contextHint } = params;
   const issueRef = doc(db, "issues", issueId);
 
   try {
+    // Resolve image base64 — prefer in-memory, fall back to fetching from URL
+    let imageBase64 = params.imageBase64 ?? "";
+    let imageMimeType = params.imageMimeType ?? "image/jpeg";
+
+    if (!imageBase64 && params.imageUrl) {
+      try {
+        const imgRes = await withTimeout(
+          fetch(params.imageUrl),
+          8_000,
+          "Image fetch",
+        );
+        if (imgRes.ok) {
+          const buffer = await imgRes.arrayBuffer();
+          const uint8 = new Uint8Array(buffer);
+          let binary = "";
+          for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+          imageBase64 = btoa(binary);
+          imageMimeType = imgRes.headers.get("content-type")?.split(";")[0] ?? mimeTypeFromUrl(params.imageUrl);
+        }
+      } catch (fetchErr) {
+        console.warn(`[${issueId}] Image fetch failed (${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}), will use deterministic.`);
+      }
+    }
+
     const geo = await reverseGeocode(lat, lng);
     const prompt = buildPrompt(description.trim() || "No description provided.", lat, lng, geo, contextHint ?? null);
-    const mimeType = imageMimeType || mimeTypeFromUrl("");
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     let aiResult: AiResult;
     let usedFallback = false;
 
-    if (!apiKey) {
-      console.warn(`[${issueId}] NEXT_PUBLIC_GEMINI_API_KEY not set — using deterministic fallback.`);
+    if (!apiKey || !imageBase64) {
+      if (!apiKey) console.warn(`[${issueId}] NEXT_PUBLIC_GEMINI_API_KEY not set — using deterministic fallback.`);
       aiResult = deterministicAnalysis(description);
       usedFallback = true;
     } else {
@@ -272,7 +296,7 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
             ai.models.generateContent({
               model: "gemini-2.5-flash",
               contents: [{ role: "user", parts: [
-                { inlineData: { data: imageBase64, mimeType } },
+                { inlineData: { data: imageBase64, mimeType: imageMimeType } },
                 { text: prompt },
               ]}],
               config: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 },
