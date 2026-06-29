@@ -142,17 +142,37 @@ export default function SignInPage() {
         router.push("/dashboard");
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
+      const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
       if (msg.includes("email-already-in-use")) {
         setError("An account with this email already exists. Sign in instead.");
       } else if (msg.includes("invalid-email")) {
-        setError("Invalid email address.");
-      } else if (msg.includes("wrong-password") || msg.includes("invalid-credential")) {
-        setError("Invalid email or password. Please try again.");
+        setError("Please enter a valid email address.");
+      } else if (msg.includes("weak-password")) {
+        setError("Password must be at least 6 characters.");
       } else if (msg.includes("user-not-found")) {
-        setError("No account found with this email. Create one instead.");
+        if (isCitizen) {
+          setError("No account found. Use "Create one" below to register first.");
+        } else {
+          setError("Account not found. Contact your administrator.");
+        }
+      } else if (
+        msg.includes("wrong-password") ||
+        msg.includes("invalid-credential") ||
+        msg.includes("invalid-login-credentials")
+      ) {
+        if (mode === "signin" && isCitizen) {
+          setError("Incorrect email or password. New here? Tap "Create one" below to register.");
+        } else if (mode === "signin") {
+          setError("Incorrect email or password. Contact your administrator if you forgot your credentials.");
+        } else {
+          setError("Incorrect password. Please try again.");
+        }
+      } else if (msg.includes("too-many-requests")) {
+        setError("Too many failed attempts. Try again in a few minutes or reset your password.");
+      } else if (msg.includes("network")) {
+        setError("Network error. Check your connection and try again.");
       } else {
-        setError(mode === "signup" ? "Failed to create account. Try again." : "Invalid email or password. Please try again.");
+        setError(mode === "signup" ? "Failed to create account. Try again." : "Sign-in failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -250,6 +270,17 @@ export default function SignInPage() {
             <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
           </div>
 
+          {/* First-time citizen hint */}
+          {isCitizen && mode === "signin" && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-start gap-2">
+              <span className="text-blue-500 text-base shrink-0 mt-0.5">ℹ️</span>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                <strong>First time here?</strong> You need to create a citizen account before signing in.
+                Tap <strong>Create Account</strong> below.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -310,16 +341,13 @@ export default function SignInPage() {
               {mode === "signin" && (
                 <>
                   {isCitizen && (
-                    <p className="text-sm text-gray-500">
-                      Don&apos;t have an account?{" "}
-                      <button
-                        type="button"
-                        onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        Create one
-                      </button>
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
+                      className="w-full border border-blue-300 text-blue-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-50 transition-colors"
+                    >
+                      Create Account (new users)
+                    </button>
                   )}
                   <p className="text-sm text-gray-500">
                     Forgot password?{" "}
