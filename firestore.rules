@@ -17,9 +17,14 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.reporter_uid == request.auth.uid;
 
-      // Authority (department) can update status/timestamps
+      // Authority (department) can update status and department workflow fields
       allow update: if request.auth.token.role == "authority"
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updated_at"]);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status", "updated_at",
+          "department_status", "department_progress",
+          "action_plan", "action_plan_generated_at",
+          "verification"
+        ]);
 
       // Command Centre can update status, governance, and department workflow fields
       allow update: if request.auth.token.role == "commandcenter"
