@@ -119,11 +119,11 @@ export default function SubmitPage() {
         contextHint: resolvedHint,
       });
 
-      fetch("/api/analyze", {
+      await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ issueId }),
-      }).catch(console.error);
+      });
 
       router.push(`/issues/${issueId}`);
     } catch (err) {
@@ -330,10 +330,10 @@ export default function SubmitPage() {
             className="w-full bg-blue-600 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {submitting
-              ? "Submitting..."
+              ? "Analyzing your report..."
               : imageUploading
               ? "Waiting for image upload..."
-              : "Submit Report → AI will analyze instantly"}
+              : "Submit Report"}
           </button>
         </div>
       </div>

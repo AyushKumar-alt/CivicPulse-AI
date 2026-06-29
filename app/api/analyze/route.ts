@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { analyzeIssue } from "@/lib/ai/analyzeIssue";
 
 export async function POST(request: Request) {
@@ -9,13 +8,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "issueId is required" }, { status: 400 });
   }
 
-  // Schedule analysis to run AFTER this response is sent.
-  // The client receives {status:"accepted"} immediately and navigates away.
-  // The after() callback completes the Gemini call and Firestore update in
-  // the background, which the client's onSnapshot listener will pick up.
-  after(async () => {
-    await analyzeIssue(issueId);
-  });
+  await analyzeIssue(issueId);
 
-  return Response.json({ status: "accepted" });
+  return Response.json({ status: "done" });
 }

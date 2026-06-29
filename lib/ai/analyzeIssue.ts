@@ -217,7 +217,15 @@ PRIORITY RULES:
 Return only valid JSON. No markdown, no code fences, no explanation.`;
 }
 
-const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000] as const;
+const RETRY_DELAYS_MS = [2_000, 4_000] as const; // max 2 retries — keep total under Vercel's 10s limit
+const GEMINI_TIMEOUT_MS = 7_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+  );
+  return Promise.race([promise, timeout]);
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -464,23 +472,27 @@ export async function analyzeIssue(issueId: string): Promise<void> {
 
     try {
       aiResult = await callWithRetry(async () => {
-        const response = await ai.models.generateContent({
-          model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { inlineData: { data: imageBase64, mimeType } },
-                { text: prompt },
-              ],
+        const response = await withTimeout(
+          ai.models.generateContent({
+            model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { inlineData: { data: imageBase64, mimeType } },
+                  { text: prompt },
+                ],
+              },
+            ],
+            config: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+              maxOutputTokens: 4096,
             },
-          ],
-          config: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-            maxOutputTokens: 4096,
-          },
-        });
+          }),
+          GEMINI_TIMEOUT_MS,
+          "Gemini generateContent",
+        );
 
         const rawText = (response.text ?? "").trim();
         const jsonText = extractJson(rawText);
