@@ -361,6 +361,8 @@ function IssueDetailModal({
   const [repairNotes, setRepairNotes] = useState("");
   const [afterImageUrl, setAfterImageUrl] = useState<string | null>(null);
   const [afterImageUploading, setAfterImageUploading] = useState(false);
+  const afterCameraRef = useRef<HTMLInputElement>(null);
+  const afterGalleryRef = useRef<HTMLInputElement>(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyError, setVerifyError] = useState("");
 
@@ -1041,20 +1043,33 @@ function IssueDetailModal({
                           ✕
                         </button>
                       </div>
+                    ) : afterImageUploading ? (
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
+                        <p className="text-xs text-gray-500">Uploading…</p>
+                      </div>
                     ) : (
-                      <label className="cursor-pointer block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
-                        <p className="text-2xl mb-1">📷</p>
-                        <p className="text-xs text-gray-500">
-                          {afterImageUploading ? "Uploading…" : "Tap to upload after photo"}
-                        </p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          onChange={handleAfterImageUpload}
-                          disabled={afterImageUploading}
-                        />
-                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => afterCameraRef.current?.click()}
+                          className="border-2 border-dashed border-blue-200 rounded-xl py-5 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        >
+                          <p className="text-2xl mb-1">📸</p>
+                          <p className="text-xs font-semibold text-blue-700">Camera</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => afterGalleryRef.current?.click()}
+                          className="border-2 border-dashed border-gray-200 rounded-xl py-5 text-center hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                        >
+                          <p className="text-2xl mb-1">🖼️</p>
+                          <p className="text-xs font-semibold text-gray-600">Gallery</p>
+                        </button>
+                        {/* Camera — opens rear camera directly */}
+                        <input ref={afterCameraRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={handleAfterImageUpload} />
+                        {/* Gallery / file picker */}
+                        <input ref={afterGalleryRef} type="file" accept="image/*" className="sr-only" onChange={handleAfterImageUpload} />
+                      </div>
                     )}
                   </div>
 

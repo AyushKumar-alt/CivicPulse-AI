@@ -34,6 +34,7 @@ export default function SubmitPage() {
   const [error, setError] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -213,17 +214,38 @@ export default function SubmitPage() {
                 )}
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-10 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
-              >
-                <div className="text-3xl mb-2">📷</div>
-                <p className="text-sm font-medium text-gray-700">Click to upload a photo</p>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG · Max 10 MB</p>
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="border-2 border-dashed border-blue-200 rounded-xl py-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+                >
+                  <div className="text-3xl mb-2">📸</div>
+                  <p className="text-sm font-semibold text-blue-700">Take Photo</p>
+                  <p className="text-xs text-gray-400 mt-1">Use camera</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-xl py-8 text-center hover:border-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="text-3xl mb-2">🖼️</div>
+                  <p className="text-sm font-semibold text-gray-700">Upload Photo</p>
+                  <p className="text-xs text-gray-400 mt-1">Gallery / files</p>
+                </button>
+              </div>
             )}
 
+            {/* Camera input — opens rear camera directly on mobile */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            {/* Gallery / file picker input */}
             <input
               ref={fileInputRef}
               type="file"
