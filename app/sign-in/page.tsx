@@ -136,9 +136,7 @@ export default function SignInPage() {
       } else {
         await signIn(email, password);
       }
-      const authorityEmail = process.env.NEXT_PUBLIC_AUTHORITY_EMAIL ?? "";
-      const commandCenterEmail = process.env.NEXT_PUBLIC_COMMANDCENTER_EMAIL ?? "";
-      if ((authorityEmail && email === authorityEmail) || (commandCenterEmail && email === commandCenterEmail)) {
+      if (role === "command" || role === "department") {
         router.push("/authority");
       } else {
         router.push("/dashboard");

@@ -10,8 +10,13 @@ export interface UserRoleInfo {
 }
 
 // Backward-compat: old authority email + new commandcenter email both → commandcenter role
+// Both env vars support comma/pipe-separated lists for multiple accounts
 const AUTHORITY_EMAIL = process.env.NEXT_PUBLIC_AUTHORITY_EMAIL ?? "";
 const COMMANDCENTER_EMAIL = process.env.NEXT_PUBLIC_COMMANDCENTER_EMAIL ?? "";
+
+const COMMANDCENTER_EMAIL_LIST = [AUTHORITY_EMAIL, ...COMMANDCENTER_EMAIL.split(/[,|]/)]
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 // "roads@demo.com:roads|electricity@demo.com:electricity|..."
 const DEPT_EMAILS_RAW = process.env.NEXT_PUBLIC_DEPARTMENT_EMAILS ?? "";
@@ -37,11 +42,8 @@ export function useUserRole(user: User | null): UserRoleInfo {
     if (!user?.email) return { role: "citizen" };
     const email = user.email.toLowerCase();
 
-    // Command center — supports both old authority@demo.com and new commandcenter@demo.com
-    if (
-      (COMMANDCENTER_EMAIL && email === COMMANDCENTER_EMAIL.toLowerCase()) ||
-      (AUTHORITY_EMAIL && email === AUTHORITY_EMAIL.toLowerCase())
-    ) {
+    // Command center — supports multiple emails via comma/pipe-separated env var
+    if (COMMANDCENTER_EMAIL_LIST.includes(email)) {
       return { role: "commandcenter" };
     }
 
