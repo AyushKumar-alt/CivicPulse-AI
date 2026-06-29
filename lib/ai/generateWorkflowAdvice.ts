@@ -104,8 +104,8 @@ function deterministicWorkflowAdvice(input: WorkflowAdviceInput): WorkflowAdvice
 
 // ── Main export ──────────────────────────────────────────────────────────────
 
-export async function generateWorkflowAdvice(input: WorkflowAdviceInput): Promise<WorkflowAdvice> {
-  const apiKey = process.env.GEMINI_API_KEY;
+export async function generateWorkflowAdvice(input: WorkflowAdviceInput, _keyOverride?: string): Promise<WorkflowAdvice> {
+  const apiKey = _keyOverride ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[WorkflowAdvice] No API key — using deterministic advisor");
     return deterministicWorkflowAdvice(input);

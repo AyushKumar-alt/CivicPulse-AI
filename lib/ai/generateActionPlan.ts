@@ -363,8 +363,8 @@ ${repair}`;
 
 // ── Main export ──────────────────────────────────────────────────────────────
 
-export async function generateActionPlan(input: ActionPlanInput): Promise<ActionPlan> {
-  const apiKey = process.env.GEMINI_API_KEY;
+export async function generateActionPlan(input: ActionPlanInput, _keyOverride?: string): Promise<ActionPlan> {
+  const apiKey = _keyOverride ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[ActionPlan] No API key — using deterministic planner");
     return deterministicActionPlan(input);

@@ -22,6 +22,10 @@ import {
   where, orderBy, limit, arrayUnion, Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { callGenerateActionPlan } from "@/lib/ai/generateActionPlanClient";
+import { callGenerateWorkflowAdvice } from "@/lib/ai/generateWorkflowAdviceClient";
+import { generateVerificationClient } from "@/lib/ai/generateVerificationClient";
+import type { IssueIntelligenceReport } from "@/lib/ai/types";
 
 const IssueMap = dynamic(() => import("@/components/IssueMap"), {
   ssr: false,
@@ -401,32 +405,21 @@ function IssueDetailModal({
     setPlanLoading(true);
     setPlanError("");
     try {
-      const ai = issue.ai as Record<string, unknown> | null;
-      const plan: ActionPlan = {
-        crew_required: (ai?.repair_complexity === "complex" ? "Specialist crew" : "Standard maintenance crew"),
-        estimated_workers: ai?.repair_complexity === "complex" ? 4 : 2,
-        estimated_duration: `${ai?.estimated_work_hours ?? 4} hours`,
-        repair_steps: (ai?.verification_checkpoints as string[]) ?? [
-          "Assess site and cordon off affected area",
-          "Execute primary repair work",
-          "Quality check and cleanup",
-        ],
-        traffic_management: (ai?.temporary_public_safety_required ? "Set up traffic cones and detour signage" : "No special traffic management required"),
-        safety_protocols: ["Wear PPE", "Follow standard municipal safety guidelines"],
-        equipment: (ai?.required_equipment as string[]) ?? [],
-        materials: [],
-        expected_completion: "Within standard SLA",
-        reasoning: "Plan generated from issue AI analysis data.",
-      };
-      // Show plan in UI immediately, write to Firestore best-effort
-      onIssueUpdated({ action_plan: plan });
+      const iir = issue.ai as unknown as IssueIntelligenceReport;
+      const plan = await callGenerateActionPlan({
+        iir,
+        departmentName: dept.name,
+        address: issue.location?.address ?? null,
+      });
+      // Update UI immediately, persist best-effort
+      onIssueUpdated({ action_plan: plan as ActionPlan });
       updateDoc(doc(db, "issues", issue.id), {
         action_plan: plan,
         action_plan_generated_at: Timestamp.now(),
         updated_at: Timestamp.now(),
-      }).catch((e) => console.warn("[ActionPlan] Firestore write failed (rules may need redeploy):", e));
-    } catch {
-      setPlanError("Failed to generate plan. Try again.");
+      }).catch((e) => console.warn("[ActionPlan] Firestore write failed:", e));
+    } catch (e) {
+      setPlanError(e instanceof Error ? e.message : "Failed to generate plan. Try again.");
     } finally {
       setPlanLoading(false);
     }
@@ -437,13 +430,38 @@ function IssueDetailModal({
     setStageLoading(true);
     setStageError("");
     try {
+      const iir = issue.ai as unknown as IssueIntelligenceReport;
+      const previousStages = (issue.department_progress ?? []).map((p) => p.stage);
+
+      // Generate AI workflow advice for this specific stage transition
+      const advice = await callGenerateWorkflowAdvice({
+        iir,
+        departmentName: dept.name,
+        address: issue.location?.address ?? null,
+        fromStage: deptStatus,
+        toStage: nextStage,
+        actionPlan: issue.action_plan
+          ? {
+              crew_required: issue.action_plan.crew_required,
+              estimated_workers: issue.action_plan.estimated_workers,
+              estimated_duration: issue.action_plan.estimated_duration,
+              repair_steps: issue.action_plan.repair_steps,
+              traffic_management: issue.action_plan.traffic_management,
+              safety_protocols: issue.action_plan.safety_protocols,
+              expected_completion: issue.action_plan.expected_completion,
+            }
+          : null,
+        previousStages,
+        notes: stageNotes.trim() || null,
+      });
+
       const now = Timestamp.now();
       const progressEntry = {
         stage: nextStage,
         timestamp: now,
         notes: stageNotes.trim() || null,
         updated_by: dept.email,
-        workflow_recommendation: null,
+        workflow_recommendation: advice,
       };
       const mainStatusUpdate = nextStage === "accepted" ? { status: "in_progress" } : {};
       await updateDoc(doc(db, "issues", issue.id), {
@@ -452,6 +470,7 @@ function IssueDetailModal({
         updated_at: now,
         ...mainStatusUpdate,
       });
+      setLastAdvice(advice);
       setStageNotes("");
       onIssueUpdated({ department_status: nextStage });
     } catch (e) {
@@ -485,25 +504,43 @@ function IssueDetailModal({
   }
 
   async function handleSubmitVerify() {
-    if (!repairType.trim() || !repairNotes.trim()) {
-      setVerifyError("Repair type and notes are required.");
-      return;
-    }
+    if (!repairType.trim()) { setVerifyError("Select or describe the repair type."); return; }
+    if (repairNotes.trim().length < 20) { setVerifyError("Repair notes must be at least 20 characters — describe exactly what was done."); return; }
     setVerifyLoading(true);
     setVerifyError("");
     try {
+      const iir = issue.ai as unknown as IssueIntelligenceReport;
+      const actionPlanSummary = issue.action_plan
+        ? {
+            crew_required: issue.action_plan.crew_required,
+            estimated_workers: issue.action_plan.estimated_workers,
+            estimated_duration: issue.action_plan.estimated_duration,
+            repair_steps: issue.action_plan.repair_steps,
+            traffic_management: issue.action_plan.traffic_management,
+            safety_protocols: issue.action_plan.safety_protocols,
+            expected_completion: issue.action_plan.expected_completion,
+          }
+        : null;
+
+      // Run AI verification against IIR checkpoints
+      const result = await generateVerificationClient({
+        iir,
+        actionPlan: actionPlanSummary,
+        departmentName: dept.name,
+        repairType: repairType.trim(),
+        repairNotes: repairNotes.trim(),
+        beforeImageUrl: issue.image_url ?? null,
+        afterImageUrl: afterImageUrl ?? null,
+      });
+
       const now = Timestamp.now();
       const verificationDoc: Verification = {
         repair_type: repairType.trim(),
         repair_notes: repairNotes.trim(),
         after_image_url: afterImageUrl ?? null,
-        recommendation: "approve",
-        confidence: 80,
-        was_issue_addressed: true,
-        reasoning: `Repair submitted by ${dept.email}: ${repairType.trim()}`,
-        concerns: [],
-        remaining_issues: null,
+        ...result,
       };
+
       const repairEntry = {
         stage: "repair_completed",
         timestamp: now,
@@ -514,10 +551,11 @@ function IssueDetailModal({
       const verifyEntry = {
         stage: "ready_for_verification",
         timestamp: now,
-        notes: "Repair submitted for Command Centre verification",
+        notes: `AI Verification: ${result.recommendation} (${result.confidence}% confidence)`,
         updated_by: dept.email,
         workflow_recommendation: null,
       };
+
       await updateDoc(doc(db, "issues", issue.id), {
         department_status: "ready_for_verification",
         status: "pending_verification",
@@ -858,7 +896,7 @@ function IssueDetailModal({
                     disabled={stageLoading}
                     className={`w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50 ${dept.activeBgClass}`}
                   >
-                    {stageLoading ? "Updating…" : `Mark as ${DEPT_STAGE_LABEL[nextStage]}`}
+                    {stageLoading ? "Generating AI Advice…" : `Mark as ${DEPT_STAGE_LABEL[nextStage]}`}
                   </button>
                 </div>
               )}
@@ -930,9 +968,22 @@ function IssueDetailModal({
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-sm font-semibold text-blue-900 mb-1">Submit Repair Report</p>
-                    <p className="text-xs text-blue-700">
-                      The AI Verification Agent will evaluate your repair. Command Center will then approve or request rework.
+                    <p className="text-xs text-blue-700 mb-2">
+                      The AI Verification Agent will evaluate your repair against the IIR checkpoints. Vague notes or missing after-photo will result in a low confidence score and rejection.
                     </p>
+                    {/* Show checkpoints from IIR so dept knows what to address */}
+                    {(issue.ai as unknown as IssueIntelligenceReport)?.verification_checkpoints?.length ? (
+                      <div className="mt-2">
+                        <p className="text-xs font-bold text-blue-900 mb-1">Your notes must address each checkpoint:</p>
+                        <ul className="space-y-0.5">
+                          {(issue.ai as unknown as IssueIntelligenceReport).verification_checkpoints!.map((cp, i) => (
+                            <li key={i} className="text-xs text-blue-800 flex items-start gap-1">
+                              <span className="text-blue-400 mt-0.5 shrink-0">✦</span>{cp}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div>
