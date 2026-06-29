@@ -218,7 +218,8 @@ Return only valid JSON. No markdown, no code fences, no explanation.`;
 }
 
 const RETRY_DELAYS_MS = [2_000, 4_000] as const;
-const GEMINI_TIMEOUT_MS = 25_000; // 25s — leaves room within 60s maxDuration for image fetch + Firestore
+const GEMINI_TIMEOUT_MS = 25_000;
+const IMAGE_FETCH_TIMEOUT_MS = 8_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   const timeout = new Promise<never>((_, reject) =>
@@ -240,23 +241,13 @@ function extractJson(text: string): string {
   return text.slice(start, end + 1);
 }
 
-function isDailyQuotaError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return (
-    msg.includes("RESOURCE_EXHAUSTED") ||
-    msg.includes("free_tier_requests") ||
-    msg.includes("quota") ||
-    (msg.includes("429") && msg.includes("limit"))
-  );
-}
-
 function isRetryable(err: unknown): boolean {
-  if (isDailyQuotaError(err)) return false; // quota exhausted — retrying is pointless
   if (err instanceof SyntaxError) return true;
   const msg = err instanceof Error ? err.message : String(err);
+  // Never retry 429 — quota exhausted or rate limited, fall back to deterministic immediately
+  if (msg.includes("429")) return false;
   return (
     msg.includes("No complete JSON") ||
-    msg.includes("429") ||
     msg.includes("503") ||
     msg.includes("high demand") ||
     msg.includes("Service Unavailable")
@@ -412,10 +403,12 @@ async function checkDuplicate(
 // ── Main analysis function ───────────────────────────────────────────────────
 
 export async function analyzeIssue(issueId: string): Promise<void> {
-  const db = getAdminDb();
-  const issueRef = db.collection("issues").doc(issueId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let issueRef: any = null;
 
   try {
+    const db = getAdminDb();
+    issueRef = db.collection("issues").doc(issueId);
     const snap = await issueRef.get();
     if (!snap.exists) {
       console.error(`[${issueId}] Issue not found in Firestore.`);
@@ -435,7 +428,7 @@ export async function analyzeIssue(issueId: string): Promise<void> {
     // Fetch geocode and image in parallel
     const [geo, imageRes] = await Promise.all([
       reverseGeocode(location.lat, location.lng),
-      fetch(imageUrl),
+      withTimeout(fetch(imageUrl), IMAGE_FETCH_TIMEOUT_MS, "Image fetch"),
     ]);
 
     if (!imageRes.ok) {
@@ -653,10 +646,14 @@ export async function analyzeIssue(issueId: string): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[${issueId}] Analysis failed:`, message);
 
-    await issueRef.update({
-      status: "error",
-      "ai.error": message,
-      updated_at: Timestamp.now(),
-    });
+    if (issueRef) {
+      await issueRef.update({
+        status: "error",
+        "ai.error": message,
+        updated_at: Timestamp.now(),
+      }).catch((e: unknown) => {
+        console.error(`[${issueId}] Failed to write error status:`, e);
+      });
+    }
   }
 }
