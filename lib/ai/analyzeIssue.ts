@@ -217,8 +217,8 @@ PRIORITY RULES:
 Return only valid JSON. No markdown, no code fences, no explanation.`;
 }
 
-const RETRY_DELAYS_MS = [2_000, 4_000] as const; // max 2 retries — keep total under Vercel's 10s limit
-const GEMINI_TIMEOUT_MS = 7_000;
+const RETRY_DELAYS_MS = [2_000, 4_000] as const;
+const GEMINI_TIMEOUT_MS = 25_000; // 25s — leaves room within 60s maxDuration for image fetch + Firestore
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   const timeout = new Promise<never>((_, reject) =>
