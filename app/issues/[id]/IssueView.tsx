@@ -198,6 +198,7 @@ export default function IssueView({ id }: { id: string }) {
   const [confirmError, setConfirmError] = useState("");
   const hasCheckedConfirm = useRef(false);
   const hasTriggeredAnalysis = useRef(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   // Comments state
   const [comments, setComments] = useState<CommentRecord[]>([]);
@@ -227,7 +228,16 @@ export default function IssueView({ id }: { id: string }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ issueId: id }),
-    }).catch(console.error);
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+          setAnalyzeError((body as { error?: string }).error ?? `HTTP ${res.status}`);
+        }
+      })
+      .catch((err: unknown) => {
+        setAnalyzeError(err instanceof Error ? err.message : "Network error");
+      });
   }, [id, issue]);
 
   useEffect(() => {
@@ -317,7 +327,7 @@ export default function IssueView({ id }: { id: string }) {
     );
   }
 
-  if (issue!.status === "processing") return <ProcessingState id={id} />;
+  if (issue!.status === "processing") return <ProcessingState id={id} error={analyzeError} />;
   if (issue!.status === "error") return <ErrorState id={id} error={issue!.ai?.error} />;
 
   const ai = issue!.ai!;
@@ -895,18 +905,29 @@ function InfoBlock({ icon, label, value }: { icon: string; label: string; value:
   );
 }
 
-function ProcessingState({ id }: { id: string }) {
+function ProcessingState({ id, error }: { id: string; error?: string | null }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
-        <div>
-          <p className="font-semibold text-gray-900">AI is analyzing your report...</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Gemini 2.5 Flash is processing the image and description
-          </p>
+      {error ? (
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-3xl">⚠️</div>
+          <div>
+            <p className="font-semibold text-red-700">Analysis failed</p>
+            <p className="text-xs text-gray-500 mt-1 font-mono bg-gray-50 px-3 py-2 rounded break-all">{error}</p>
+            <p className="text-xs text-gray-400 mt-2">Check Vercel env vars — FIREBASE_SERVICE_ACCOUNT_JSON may be missing or malformed</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+          <div>
+            <p className="font-semibold text-gray-900">AI is analyzing your report...</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Processing the image and description
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mt-8 pt-6 border-t border-gray-100">
         <p className="text-xs text-gray-400">Issue ID: {id}</p>
         <p className="text-xs text-gray-400 mt-1">This page updates automatically when analysis completes</p>

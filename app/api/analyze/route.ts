@@ -11,7 +11,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "issueId is required" }, { status: 400 });
   }
 
-  await analyzeIssue(issueId);
-
-  return Response.json({ status: "done" });
+  try {
+    await analyzeIssue(issueId);
+    return Response.json({ status: "done" });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[analyzeRoute][${issueId}] Unhandled error:`, message);
+    return Response.json({ error: message }, { status: 500 });
+  }
 }
