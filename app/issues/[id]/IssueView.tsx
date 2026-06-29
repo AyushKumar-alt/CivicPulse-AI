@@ -197,8 +197,6 @@ export default function IssueView({ id }: { id: string }) {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
   const hasCheckedConfirm = useRef(false);
-  const hasTriggeredAnalysis = useRef(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   // Comments state
   const [comments, setComments] = useState<CommentRecord[]>([]);
@@ -218,27 +216,6 @@ export default function IssueView({ id }: { id: string }) {
     );
     return unsubscribe;
   }, [id]);
-
-  // Trigger analysis from this page — the issue detail page stays open and won't
-  // cancel the request, unlike the submit page which navigates away immediately.
-  useEffect(() => {
-    if (hasTriggeredAnalysis.current || !issue || issue.status !== "processing") return;
-    hasTriggeredAnalysis.current = true;
-    fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ issueId: id }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-          setAnalyzeError((body as { error?: string }).error ?? `HTTP ${res.status}`);
-        }
-      })
-      .catch((err: unknown) => {
-        setAnalyzeError(err instanceof Error ? err.message : "Network error");
-      });
-  }, [id, issue]);
 
   useEffect(() => {
     if (hasCheckedConfirm.current || !user || !issue || issue.status === "processing") return;
@@ -327,7 +304,7 @@ export default function IssueView({ id }: { id: string }) {
     );
   }
 
-  if (issue!.status === "processing") return <ProcessingState id={id} error={analyzeError} />;
+  if (issue!.status === "processing") return <ProcessingState id={id} />;
   if (issue!.status === "error") return <ErrorState id={id} error={issue!.ai?.error} />;
 
   const ai = issue!.ai!;

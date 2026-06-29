@@ -17,8 +17,20 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.reporter_uid == request.auth.uid;
 
+      // Authority can update status/timestamps
       allow update: if request.auth.token.role == "authority"
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updated_at"]);
+
+      // Reporter can write AI analysis results (analysis runs client-side, result written here)
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.reporter_uid
+        && resource.data.status == "processing"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "ai", "status", "updated_at",
+          "area_category", "area_confidence", "area_reasoning", "affected_entity_type",
+          "assigned_department", "assigned_department_name", "assigned_department_email",
+          "assigned_at", "assigned_by", "assignment_method", "location"
+        ]);
 
       allow delete: if false;
 

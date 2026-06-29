@@ -7,6 +7,7 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { createIssue } from "@/lib/firebase/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { reverseGeocode } from "@/lib/geocode";
+import { analyzeIssueClient } from "@/lib/ai/analyzeIssueClient";
 
 export default function SubmitPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function SubmitPage() {
   // Image state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string>("image/jpeg");
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState("");
 
@@ -42,8 +45,18 @@ export default function SubmitPage() {
 
     setImagePreview(URL.createObjectURL(file));
     setImageUrl(null);
+    setImageBase64(null);
     setImageError("");
     setImageUploading(true);
+    setImageMimeType(file.type || "image/jpeg");
+
+    // Read as base64 for Gemini analysis (runs client-side)
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImageBase64(result.split(",")[1] ?? null);
+    };
+    reader.readAsDataURL(file);
 
     try {
       const url = await uploadToCloudinary(file);
@@ -60,6 +73,7 @@ export default function SubmitPage() {
   function handleRemoveImage() {
     setImagePreview(null);
     setImageUrl(null);
+    setImageBase64(null);
     setImageError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -118,6 +132,17 @@ export default function SubmitPage() {
         location,
         contextHint: resolvedHint,
       });
+
+      // Fire-and-forget: runs in browser JS context, survives client-side navigation
+      analyzeIssueClient({
+        issueId,
+        imageBase64: imageBase64 ?? "",
+        imageMimeType,
+        description: description || "",
+        lat: location.lat,
+        lng: location.lng,
+        contextHint: resolvedHint ?? null,
+      }).catch(console.error);
 
       router.push(`/issues/${issueId}`);
     } catch (err) {
