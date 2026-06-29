@@ -1298,9 +1298,12 @@ export default function AuthorityPage() {
     }
   }, [authLoading, user, fetchIssues, fetchBriefing]);
 
-  // Role guard
+  // Role guard — only command centre may access this page
   useEffect(() => {
-    if (!authLoading && user && roleInfo.role !== "commandcenter") {
+    if (authLoading || !user) return;
+    if (roleInfo.role === "department") {
+      router.replace("/department");
+    } else if (roleInfo.role === "citizen") {
       router.replace("/dashboard");
     }
   }, [authLoading, user, roleInfo, router]);

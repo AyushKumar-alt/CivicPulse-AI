@@ -1227,8 +1227,12 @@ export default function DepartmentPage() {
 
   const dept = roleInfo.department ? getDepartmentByKey(roleInfo.department) : null;
 
+  // Role guard — only department accounts may access this page
   useEffect(() => {
-    if (!authLoading && user && roleInfo.role !== "department") {
+    if (authLoading || !user) return;
+    if (roleInfo.role === "commandcenter") {
+      router.replace("/authority");
+    } else if (roleInfo.role === "citizen") {
       router.replace("/dashboard");
     }
   }, [authLoading, user, roleInfo, router]);

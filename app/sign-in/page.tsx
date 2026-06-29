@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn, createAccount, resetPassword } from "@/lib/firebase/auth";
+import { signIn, createAccount, resetPassword, logout } from "@/lib/firebase/auth";
 
 type RoleType = "citizen" | "command" | "department";
 type FormMode = "signin" | "signup" | "reset";
@@ -131,13 +131,51 @@ export default function SignInPage() {
         setMode("signin");
         return;
       }
+      let fbUser;
       if (mode === "signup") {
-        await createAccount(email, password);
+        const cred = await createAccount(email, password);
+        fbUser = cred.user;
       } else {
-        await signIn(email, password);
+        const cred = await signIn(email, password);
+        fbUser = cred.user;
       }
-      if (role === "command" || role === "department") {
+
+      // Enforce role ↔ claim match
+      const token = await fbUser.getIdTokenResult();
+      const claimedRole = token.claims.role as string | undefined;
+
+      const isOfficialAccount = claimedRole === "commandcenter" || claimedRole === "authority";
+
+      if (role === "command" && claimedRole !== "commandcenter") {
+        await logout();
+        setError(
+          isOfficialAccount
+            ? "This account belongs to a different portal. Please go back and select the correct role."
+            : "This account is not authorised for the Command Centre portal.",
+        );
+        return;
+      }
+      if (role === "department" && claimedRole !== "authority") {
+        await logout();
+        setError(
+          isOfficialAccount
+            ? "This account belongs to a different portal. Please go back and select the correct role."
+            : "This account is not authorised for the Department portal.",
+        );
+        return;
+      }
+      if (role === "citizen" && isOfficialAccount) {
+        await logout();
+        setError(
+          "This is an official account. Please go back and sign in through the Command Centre or Department portal.",
+        );
+        return;
+      }
+
+      if (role === "command") {
         router.push("/authority");
+      } else if (role === "department") {
+        router.push("/department");
       } else {
         router.push("/dashboard");
       }
@@ -151,7 +189,7 @@ export default function SignInPage() {
         setError("Password must be at least 6 characters.");
       } else if (msg.includes("user-not-found")) {
         if (isCitizen) {
-          setError("No account found. Use "Create one" below to register first.");
+          setError("No account found. Use 'Create Account' below to register first.");
         } else {
           setError("Account not found. Contact your administrator.");
         }
@@ -161,7 +199,7 @@ export default function SignInPage() {
         msg.includes("invalid-login-credentials")
       ) {
         if (mode === "signin" && isCitizen) {
-          setError("Incorrect email or password. New here? Tap "Create one" below to register.");
+          setError("Incorrect email or password. New here? Tap 'Create Account' below to register.");
         } else if (mode === "signin") {
           setError("Incorrect email or password. Contact your administrator if you forgot your credentials.");
         } else {
