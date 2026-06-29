@@ -418,12 +418,13 @@ function IssueDetailModal({
         expected_completion: "Within standard SLA",
         reasoning: "Plan generated from issue AI analysis data.",
       };
-      await updateDoc(doc(db, "issues", issue.id), {
+      // Show plan in UI immediately, write to Firestore best-effort
+      onIssueUpdated({ action_plan: plan });
+      updateDoc(doc(db, "issues", issue.id), {
         action_plan: plan,
         action_plan_generated_at: Timestamp.now(),
         updated_at: Timestamp.now(),
-      });
-      onIssueUpdated({ action_plan: plan });
+      }).catch((e) => console.warn("[ActionPlan] Firestore write failed (rules may need redeploy):", e));
     } catch {
       setPlanError("Failed to generate plan. Try again.");
     } finally {

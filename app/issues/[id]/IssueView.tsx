@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import {
+  doc, onSnapshot, collection, getDocs, addDoc,
+  setDoc, updateDoc, runTransaction, query, orderBy, limit,
+  increment, Timestamp,
+} from "firebase/firestore";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { db } from "@/lib/firebase/client";
@@ -247,13 +251,24 @@ export default function IssueView({ id }: { id: string }) {
   const fetchComments = useCallback(async () => {
     if (!user) return;
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/issue/${id}/comments`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setComments((await res.json()) as CommentRecord[]);
-      }
+      const q = query(
+        collection(db, "issues", id, "comments"),
+        orderBy("created_at", "asc"),
+        limit(50),
+      );
+      const snap = await getDocs(q);
+      setComments(snap.docs.map((d) => {
+        const data = d.data();
+        const ts = data.created_at;
+        return {
+          id: d.id,
+          user_uid: data.user_uid as string,
+          text: data.text as string,
+          created_at: ts && typeof ts === "object" && "toMillis" in ts
+            ? (ts as { toMillis: () => number }).toMillis()
+            : null,
+        } as CommentRecord;
+      }));
     } catch { /* ignore */ }
   }, [id, user]);
 
@@ -265,24 +280,24 @@ export default function IssueView({ id }: { id: string }) {
 
   async function handleAddComment() {
     if (!user || !commentText.trim() || commentSubmitting) return;
+    const text = commentText.trim();
+    if (text.length > 300) { setCommentError("Comment must be under 300 characters."); return; }
     setCommentSubmitting(true);
     setCommentError("");
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/issue/${id}/comment`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ text: commentText.trim() }),
+      await addDoc(collection(db, "issues", id, "comments"), {
+        user_uid: user.uid,
+        text,
+        created_at: Timestamp.now(),
       });
-      if (res.ok) {
-        setCommentText("");
-        await fetchComments();
-      } else {
-        const body = (await res.json()) as { error: string };
-        setCommentError(body.error ?? "Could not add comment.");
-      }
-    } catch {
-      setCommentError("Network error. Please try again.");
+      updateDoc(doc(db, "issues", id), {
+        comment_count: increment(1),
+        updated_at: Timestamp.now(),
+      }).catch(() => {});
+      setCommentText("");
+      await fetchComments();
+    } catch (e) {
+      setCommentError(e instanceof Error ? e.message : "Could not add comment.");
     } finally {
       setCommentSubmitting(false);
     }
@@ -293,19 +308,30 @@ export default function IssueView({ id }: { id: string }) {
     setConfirmLoading(true);
     setConfirmError("");
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/issue/${id}/confirm`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+      const issueRef = doc(db, "issues", id);
+      const confirmRef = doc(db, "issues", id, "confirmations", user.uid);
+      const ESCALATION_THRESHOLD = 3;
+      await runTransaction(db, async (tx) => {
+        const [issueSnap, confirmSnap] = await Promise.all([tx.get(issueRef), tx.get(confirmRef)]);
+        if (!issueSnap.exists()) throw new Error("Issue not found");
+        if (confirmSnap.exists()) return; // already confirmed — treat as success
+        const data = issueSnap.data()!;
+        if (data.reporter_uid === user.uid) throw new Error("Cannot confirm your own issue");
+        const newCount = ((data.confirmation_count as number) ?? 0) + 1;
+        const updates: Record<string, unknown> = { confirmation_count: newCount, updated_at: Timestamp.now() };
+        if (newCount >= ESCALATION_THRESHOLD && !data.escalated) {
+          updates.escalated = true;
+          updates.escalated_at = Timestamp.now();
+          updates.escalation_reason = `Auto-escalated: ${newCount} community confirmations`;
+        }
+        tx.set(confirmRef, { uid: user.uid, confirmed_at: Timestamp.now() });
+        tx.update(issueRef, updates);
       });
-      if (res.ok || res.status === 409) {
-        setConfirmed(true);
-      } else {
-        const body = (await res.json()) as { error: string };
-        setConfirmError(body.error ?? "Could not confirm.");
-      }
-    } catch {
-      setConfirmError("Network error. Please try again.");
+      setConfirmed(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("own issue")) { setConfirmError("You cannot confirm your own issue."); }
+      else { setConfirmError("Could not confirm. Please try again."); }
     } finally {
       setConfirmLoading(false);
     }

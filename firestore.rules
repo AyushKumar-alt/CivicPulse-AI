@@ -47,6 +47,24 @@ service cloud.firestore {
 
       allow delete: if request.auth.token.role == "commandcenter";
 
+      // Any authenticated non-reporter can increment confirmation count + trigger escalation
+      allow update: if request.auth != null
+        && request.auth.uid != resource.data.reporter_uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "confirmation_count", "escalated", "escalated_at", "escalation_reason",
+          "comment_count", "updated_at"
+        ]);
+
+      match /comments/{commentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.user_uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 300;
+        allow update, delete: if false;
+      }
+
       match /confirmations/{uid} {
         allow read: if request.auth != null;
 

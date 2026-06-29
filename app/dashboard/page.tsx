@@ -11,6 +11,8 @@ import {
   getCommunityIssues,
   hasUserConfirmed,
 } from "@/lib/firebase/firestore";
+import { doc, runTransaction, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 type Tab = "my" | "community";
 
@@ -379,23 +381,30 @@ export default function DashboardPage() {
     if (!user || confirmingId !== null || confirmedSet.has(issueId)) return;
     setConfirmingId(issueId);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/issue/${issueId}/confirm`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+      const issueRef = doc(db, "issues", issueId);
+      const confirmRef = doc(db, "issues", issueId, "confirmations", user.uid);
+      const ESCALATION_THRESHOLD = 3;
+      let newCount = 0;
+      await runTransaction(db, async (tx) => {
+        const [issueSnap, confirmSnap] = await Promise.all([tx.get(issueRef), tx.get(confirmRef)]);
+        if (!issueSnap.exists() || confirmSnap.exists()) return;
+        const data = issueSnap.data()!;
+        if (data.reporter_uid === user.uid) return;
+        newCount = ((data.confirmation_count as number) ?? 0) + 1;
+        const updates: Record<string, unknown> = { confirmation_count: newCount, updated_at: Timestamp.now() };
+        if (newCount >= ESCALATION_THRESHOLD && !data.escalated) {
+          updates.escalated = true;
+          updates.escalated_at = Timestamp.now();
+          updates.escalation_reason = `Auto-escalated: ${newCount} community confirmations`;
+        }
+        tx.set(confirmRef, { uid: user.uid, confirmed_at: Timestamp.now() });
+        tx.update(issueRef, updates);
       });
-
-      if (res.ok) {
-        const body = (await res.json()) as { confirmation_count: number };
-        setConfirmedSet((prev) => new Set(prev).add(issueId));
+      setConfirmedSet((prev) => new Set(prev).add(issueId));
+      if (newCount > 0) {
         setCommunityIssues((prev) =>
-          prev.map((i) =>
-            i.id === issueId ? { ...i, confirmation_count: body.confirmation_count } : i,
-          ),
+          prev.map((i) => i.id === issueId ? { ...i, confirmation_count: newCount } : i),
         );
-      } else if (res.status === 409) {
-        // Already confirmed elsewhere
-        setConfirmedSet((prev) => new Set(prev).add(issueId));
       }
     } catch (e) {
       console.error(e);
