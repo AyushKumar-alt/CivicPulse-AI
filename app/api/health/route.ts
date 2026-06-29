@@ -1,5 +1,7 @@
 import { getAdminDb } from "@/lib/firebase/admin";
 
+export const maxDuration = 30;
+
 export async function GET() {
   const results: Record<string, unknown> = {};
 

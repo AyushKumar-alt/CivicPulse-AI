@@ -48,8 +48,11 @@ function getAdminApp() {
 }
 
 // Database ID is "default" (no parentheses) — specific to this project's Firestore instance.
+// preferRest: true — use HTTP transport instead of gRPC so no native modules are needed on Vercel.
 export function getAdminDb() {
-  return getFirestore(getAdminApp(), "default");
+  const db = getFirestore(getAdminApp(), "default");
+  db.settings({ preferRest: true });
+  return db;
 }
 
 export function getAdminAuth() {
