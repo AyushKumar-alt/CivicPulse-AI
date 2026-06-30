@@ -12,6 +12,10 @@
   <img src="https://img.shields.io/badge/▶%20Demo%20Video-Watch%20Now-FF0000?style=for-the-badge&logo=google-drive&logoColor=white" alt="Demo Video" />
 </a>
 &nbsp;&nbsp;
+<a href="https://drive.google.com/file/d/1eZPHg-Vx_K3ywxzl5_VEeYTqVdn2XnIv/view?usp=drive_link">
+  <img src="https://img.shields.io/badge/📱%20Mobile%20Demo-Watch%20Now-34A853?style=for-the-badge&logo=google-drive&logoColor=white" alt="Mobile App Demo" />
+</a>
+&nbsp;&nbsp;
 <a href="https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority">
   <img src="https://img.shields.io/badge/☁️%20Google%20Cloud-Live%20Shell-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Google Cloud" />
 </a>
@@ -351,9 +355,10 @@ LAYER 3 — FIRESTORE SECURITY RULES (server-side, cannot be bypassed)
 
 | | |
 |---|---|
-|  **Production (Vercel)** | [community-hero-ai-kappa.vercel.app](https://community-hero-ai-kappa.vercel.app/) |
-|  **Google Cloud Shell** | [Cloud Shell Instance](https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority) |
-|  **Demo Video** | [Watch on Google Drive](https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link) |
+| 🚀 **Production (Vercel)** | [community-hero-ai-kappa.vercel.app](https://community-hero-ai-kappa.vercel.app/) |
+| ☁️ **Google Cloud Shell** | [Cloud Shell Instance](https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority) |
+| 🎬 **Demo Video** | [Watch on Google Drive](https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link) |
+| 📱 **Mobile App Demo** | [Watch on Google Drive](https://drive.google.com/file/d/1eZPHg-Vx_K3ywxzl5_VEeYTqVdn2XnIv/view?usp=drive_link) |
 
 ---
 
