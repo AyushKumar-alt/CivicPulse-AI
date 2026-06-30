@@ -52,7 +52,7 @@ It replaces fragmented hotlines and unstructured social media complaints with an
 <tr>
 <td width="50%" valign="top">
 
-### 🤖 Issue Intelligence Report (IIR)
+###  Issue Intelligence Report (IIR)
 Every submitted issue is analysed by **Google Gemini 2.5 Flash**. A single photo generates 35+ structured fields — severity, impact score, affected population, area classification, repair complexity, required equipment, safety protocols, and automatic department routing. The image is analysed exactly once; all downstream agents reason from the stored report.
 
 </td>
