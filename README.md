@@ -1,213 +1,386 @@
-# Community Hero AI 🦸‍♂️🏙️
+<div align="center">
 
-Community Hero AI is a next-generation, AI-driven civic operations and issue resolution platform. Built using **Next.js 16 (Turbopack)**, **Firebase**, and **Google AI Studio (Gemini 2.5 Flash)**, the platform streamlines how citizens report community infrastructure issues and how municipal departments organize, plan, resolve, and verify repairs.
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=220&section=header&text=Community%20Hero%20AI&fontSize=60&fontColor=fff&animation=twinkling&fontAlignY=38&desc=AI-Powered%20Civic%20Operations%20Platform&descAlignY=58&descSize=22&descColor=cce4ff" width="100%" />
 
-By employing a **Collaborative Multi-Agent AI system**, the application automates cognitive tasks like visual classification, severity assessment, duplicate detection, action planning, operational advice, and quality verification.
+<br/>
+
+<a href="https://community-hero-ai-kappa.vercel.app/">
+  <img src="https://img.shields.io/badge/🌐%20Live%20Demo-community--hero--ai-0070f3?style=for-the-badge&logoColor=white" alt="Live Demo" />
+</a>
+&nbsp;&nbsp;
+<a href="https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link">
+  <img src="https://img.shields.io/badge/▶%20Demo%20Video-Watch%20Now-FF0000?style=for-the-badge&logo=google-drive&logoColor=white" alt="Demo Video" />
+</a>
+&nbsp;&nbsp;
+<a href="https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority">
+  <img src="https://img.shields.io/badge/☁️%20Google%20Cloud-Live%20Shell-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Google Cloud" />
+</a>
+
+<br/><br/>
+
+<img src="https://img.shields.io/badge/Next.js-16.2.9-000000?style=flat-square&logo=next.js&logoColor=white" />
+<img src="https://img.shields.io/badge/Firebase-Auth%20%26%20Firestore-FFCA28?style=flat-square&logo=firebase&logoColor=black" />
+<img src="https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4?style=flat-square&logo=google&logoColor=white" />
+<img src="https://img.shields.io/badge/Tailwind%20CSS-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
+<img src="https://img.shields.io/badge/Cloudinary-Image%20CDN-3448C5?style=flat-square&logo=cloudinary&logoColor=white" />
+<img src="https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel&logoColor=white" />
+<img src="https://img.shields.io/badge/Google%20Cloud-Hosted-4285F4?style=flat-square&logo=google-cloud&logoColor=white" />
+
+<br/><br/>
+
+<p><em>Bridging citizens and municipal government through AI — report a civic issue, get it analyzed, assigned, repaired, verified, and governance-reviewed, all in one transparent platform.</em></p>
+
+</div>
 
 ---
 
-## 🌟 Key Features & User Roles
+## 🎯 What is Community Hero AI?
 
-The platform is designed around three distinct user roles, each with custom workflows:
+Community Hero AI is a full-stack, AI-powered civic infrastructure management platform that transforms how citizens report local issues — potholes, water leaks, electrical failures, sanitation problems — and how municipal departments resolve them.
 
-### 1. Citizens (Report & Validate)
-* **Visual Submission**: Citizens capture and upload a photo of a civic issue (e.g., pothole, water leakage, broken signal).
-* **Location Capture**: The system captures precise GPS coordinates and reverse-geocodes them to a clean address.
-* **Context Hints**: Citizens can supply location hints (e.g., "Near a hospital" or "Near a school") to help the AI gauge community impact.
-* **Social Confirmation ("I've seen this")**: Community members confirm other active issues, bumping their priority score dynamically.
-* **Discussion Forums**: Public comments and feedback threads on individual issues.
-
-### 2. Municipal Command Center (HQ Dashboard)
-* **Situational Intelligence Map**: An interactive map showing all reported issues color-coded by AI-assessed severity.
-* **Morning Briefing**: An AI-generated dashboard briefing summarizing overnight developments, active bottlenecks, weather sensitivities, and queue statuses.
-* **Auto-Escalation**: System automatically detects critical safety hazards, escalating them and generating a detailed **Escalation Brief**.
-* **Visual Verification Inspector**: Final sign-off interface where HQ reviews repairs submitted by departments alongside AI verification recommendations.
-* **Manual Override**: Ability to re-route issues between departments or change statuses.
-
-### 3. Department Operators (Action & Resolve)
-* **Custom Queues**: Dedicated dashboards for specific departments (e.g., Roads, Sanitation, Water & Sewerage, Electricity, Traffic).
-* **AI Action Plans**: For every assigned issue, the system generates a step-by-step resolution plan, including required skills, materials, and safety steps.
-* **Workflow Advisor**: Provides live operational warnings and advice (e.g., "Avoid scheduling during peak hours 8 AM - 10 AM due to traffic" or "Rain forecast: road patch work is weather-sensitive").
-* **Resolution Upload**: Field crews submit photos of the completed work along with notes, triggering the verification loop.
+It replaces fragmented hotlines and unstructured social media complaints with an end-to-end intelligent workflow: from the moment a citizen photographs an issue, to the moment a Command Centre officer signs off on the completed repair — with full AI reasoning, photographic verification, and governance accountability at every step.
 
 ---
 
-## 🤖 The Multi-Agent AI Architecture
+## ✨ Features
 
-The heart of the application is a suite of specialized AI agents built on **Gemini 2.5 Flash** that collaborate asynchronously:
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🤖 Issue Intelligence Report (IIR)
+Every submitted issue is analysed by **Google Gemini 2.5 Flash**. A single photo generates 35+ structured fields — severity, impact score, affected population, area classification, repair complexity, required equipment, safety protocols, and automatic department routing. The image is analysed exactly once; all downstream agents reason from the stored report.
+
+</td>
+<td width="50%" valign="top">
+
+### 📍 Instant GPS Location
+Two-stage geolocation: network/WiFi fix in under 1 second, then silent GPS refinement in the background. Coordinates are reverse-geocoded to a human-readable address and zone type (Residential, Commercial, Healthcare, Industrial). Citizens get their location captured fast — no waiting.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🏗️ Department AI Workflow
+Departments receive AI-generated **Action Plans** (crew, tools, safety protocols, step-by-step instructions, traffic management) and stage-by-stage **Workflow Advice** as they advance through:
+`Assigned → Acknowledged → Site Inspection → In Progress → Pending Verification`
+
+</td>
+<td width="50%" valign="top">
+
+### 📸 AI Photographic Verification
+When repair is complete, departments upload an after-photo. The **Verification Agent** cross-checks it against the original IIR and Action Plan, returning a confidence score (0–100%) and recommendation — **Approve / Needs Inspection / Needs Rework** — with detailed reasoning.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🏛️ Governance Review & Accountability
+The Command Centre triggers **AI Governance Reviews** on any completed issue — generating quality scores, SLA compliance checks, accountability reports, and public disclosure summaries. Officers can override AI decisions with documented reasons; both the AI recommendation and override are permanently stored.
+
+</td>
+<td width="50%" valign="top">
+
+### 🌅 Morning AI Briefing
+Every morning, the Command Centre receives a **narrative AI briefing**: open critical issues, overdue repairs, department backlogs, escalation alerts — a full situational picture before the day begins.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🔐 3-Layer Role Security
+**Role selection at sign-in → Firebase custom claims validation → page-level guards.** Citizens, Department staff, and Command Centre are cryptographically separated. Cross-role access is blocked at every layer — selecting the wrong portal and entering valid credentials shows an access denial, not the wrong dashboard.
+
+</td>
+<td width="50%" valign="top">
+
+### 🌙 Dark Mode + PWA
+Full dark mode with anti-flash script, localStorage persistence, and system preference detection. Installable as a **Progressive Web App** on any Android or iOS device directly from the browser — no app store required.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 👥 Community Confirmation & Escalation
+Citizens can **confirm** each other's reports. At 3 confirmations, an issue is automatically escalated with an AI-generated **Escalation Brief** (risk summary, affected population estimate, urgency level, recommended action). Critical-severity issues escalate immediately.
+
+</td>
+<td width="50%" valign="top">
+
+### 💬 Community Comments
+Citizens add live comments (up to 300 characters) to any issue — contributing local knowledge, updates, or follow-up context. Comment counts are tracked and displayed. All comments are permanently stored and cannot be edited or deleted after posting (audit integrity).
+
+</td>
+</tr>
+</table>
+
+---
+
+## 👥 User Roles & Access
+
+| Role | Portal | Capabilities |
+|------|--------|--------------|
+| 🏘️ **Citizen** | `/dashboard` | Report issues · Track status · Confirm reports · Add comments · View IIR |
+| 🏗️ **Department** | `/department` | Manage assigned issues · Generate AI plans · Advance stages · Submit verification |
+| 🏛️ **Command Centre** | `/authority` | Full oversight · Analytics · Governance review · Morning briefing · Delete issues |
+
+**Department accounts:** Roads · CMWSSB (Water Supply) · Electricity · Sanitation · Traffic · Public Works
+
+---
+
+## 🔄 Complete Working Flow
 
 ```
-                  ┌──────────────────────┐
-                  │   Citizen Upload     │
-                  └──────────┬───────────┘
-                             │
-                             ▼
-                  ┌──────────────────────┐
-                  │    Analysis Agent    ├─────────┐
-                  └──────────┬───────────┘         │
-                             │ (Creates IIR)       │ (Checks for duplicates)
-                             ▼                     ▼
-                  ┌──────────────────────┐   ┌─────────────┐
-                  │   Routing Agent      │   │ Duplicate   │
-                  │   (Deterministic)    │   │ Detector    │
-                  └──────────┬───────────┘   └─────────────┘
-                             │
-                             ▼
-                  ┌──────────────────────┐
-                  │ Assigned Department  │
-                  └──────┬──────────┬────┘
-                         │          │
-        (Generates Plan) │          │ (Operational Advice)
-                         ▼          ▼
-  ┌─────────────────────────┐   ┌─────────────────────────┐
-  │   Action Planner Agent  │   │  Workflow Advisor Agent │
-  └─────────────────────────┘   └─────────────────────────┘
-                         │          │
-                         ▼          ▼
-                  ┌──────────────────────┐
-                  │   Repair Completed   │
-                  └──────────┬───────────┘
-                             │ (Upload post-repair photo)
-                             ▼
-                  ┌──────────────────────┐
-                  │  Verification Agent  │
-                  └──────────┬───────────┘
-                             │ (Recommends Approve/Rework)
-                             ▼
-                  ┌──────────────────────┐
-                  │    Command Center    │
-                  └──────────────────────┘
+CITIZEN                     DEPARTMENT                  COMMAND CENTRE
+  │                              │                             │
+  ├─ 📸 Take / Upload Photo      │                             │
+  ├─ 📍 GPS Location (2-stage)   │                             │
+  ├─ 📝 Description (optional)   │                             │
+  ├─ 🏥 Nearby Context           │                             │
+  │                              │                             │
+  ├── SUBMIT ──────────────────────────────────────────────────────────►
+  │                              │                             │
+  ├─ 🤖 Analysis Agent → IIR (35+ fields generated)           │
+  ├─ 🗂️  Issue auto-assigned to responsible department         │
+  ├─ ⚠️  Escalation check (Critical severity / 3 confirms)     │
+  │                              │                             │
+  │                       ┌──────┴──────┐                      │
+  │                       │ Receive IIR │                      │
+  │                       │ + Assignment│                      │
+  │                       └──────┬──────┘                      │
+  │                              │                             │
+  │                       ┌──────┴─────────────────┐           │
+  │                       │ Generate Action Plan    │           │
+  │                       │ AI: crew · tools ·      │           │
+  │                       │ steps · safety ·        │           │
+  │                       │ traffic · timeline      │           │
+  │                       └──────┬─────────────────┘           │
+  │                              │                             │
+  │                       ┌──────┴─────────────────┐           │
+  │                       │ Stage Advance (x4 steps)│           │
+  │                       │ + AI Workflow Advice    │           │
+  │                       │   at each transition    │           │
+  │                       └──────┬─────────────────┘           │
+  │                              │                             │
+  │                       ┌──────┴─────────────────┐           │
+  │                       │ Upload After-Photo      │           │
+  │                       │ AI Verification Report  │           │
+  │                       │ Confidence Score        │           │
+  │                       │ Approve / Rework        │           │
+  │                       └──────┬─────────────────┘           │
+  │                              │                             │
+  │                              │──── Verification ────►┌─────┴──────────┐
+  │                              │                        │ Governance AI  │
+  │                              │                        │ Review         │
+  │                              │                        │ Accountability │
+  │                              │                        │ Quality Score  │
+  │                              │                        └─────┬──────────┘
+  │                              │                             │
+  ◄──────────────────────────────────── Status Updates ─────────┤
+  Issue Resolved ✅ / Rework Ordered 🔁                         │
 ```
 
-### 1. Analysis Agent
-Runs immediately upon issue creation.
-* **Visual Understanding**: Inspects the image to identify the exact issue type (e.g., "Road Cave-in", "Sewage Leak").
-* **Severity & Safety Assessment**: Grades the issue (Low, Medium, High, Critical) and describes the public safety risk.
-* **Area Intelligence**: Determines the *functional* category of the area (e.g., "Educational Campus", "Healthcare Zone", "IT District") based on address cues and visual evidence.
-* **Civic Impact & Priority Scoring**: Calculates a dynamic priority score (0-10) using severity, area usage, and citizen confirmation count.
-* **Repair Intelligence**: Sets initial expectations (estimated work hours, complexity, weather sensitivity, required safety setups, and specific verification checkpoints).
+---
 
-### 2. Action Planner Agent
-Consumes the **Issue Intelligence Report (IIR)** created by the Analysis Agent to output:
-* Required crew size, skills, and expected duration.
-* Sequence of repair steps tailored to local conditions.
-* Traffic management guidelines and safety protocols.
+## 🤖 AI Agent Architecture
 
-### 3. Workflow Advisor Agent
-Examines the IIR and active project state to output contextual advice:
-* Identifies operational bottlenecks.
-* Flags constraints (e.g., peak-hour traffic restrictions, permits required).
-* Predicts expected delays and proposes mitigation strategies.
+| Agent | Trigger | Input | Output |
+|-------|---------|-------|--------|
+| **Analysis Agent** | On submission | Photo + GPS + Description + Context | Full IIR (35+ fields) |
+| **Community Summarizer** | After multiple nearby reports | Clustered issue group | Concern level + summary |
+| **Escalation Briefing Agent** | 3+ confirmations or Critical severity | IIR + confirmation data | Urgency level + escalation brief |
+| **Action Plan Agent** | Department request | IIR + department + address | Repair plan: crew, steps, safety, timeline |
+| **Workflow Advice Agent** | Each stage transition | IIR + Plan + current stage | Stage checklist + risk warnings |
+| **Verification Agent** | After-photo upload | IIR + Plan + photo + notes + checkpoints | Confidence score + Approve/Rework |
+| **Governance Review Agent** | Command Centre request | IIR + Plan + Verification + Full history | Quality score + accountability report |
+| **Morning Briefing Agent** | Daily on CC login | All open issues | Narrative situational summary |
 
-### 4. Verification Agent
-Triggers when a department submits a completed repair with a "before" and "after" photo.
-* **Visual Audit**: Performs a direct visual comparison of the original issue photo against the post-repair photo.
-* **Checkpoint Evaluation**: Tests if each of the verification checkpoints generated during analysis has been addressed.
-* **Closure Recommendation**: Outputs a confidence percentage and a recommendation (`approve` | `needs_inspection` | `needs_rework`) with detailed reasoning and concerns.
-* **Fallback**: Uses a deterministic keyword-matching fallback if Gemini API limits are reached.
-
-### 5. Morning Briefing Agent
-Aggregates active issues across all department queues to draft a high-level situational overview for Command Center dashboard operators every day.
-
-### 6. Community Agent (Summarizer)
-Analyzes discussion logs and comments on issues, evaluating public sentiment, identifying recurring problems, and flagging issues that require escalation.
+> **Single Image Principle:** The photo is sent to Gemini exactly once at submission. Every downstream agent reasons from the stored IIR — not the raw image. This keeps API costs minimal and all responses fast.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-* **Frontend**: Next.js 16 (App Router, Turbopack, React 19)
-* **Styling**: Tailwind CSS
-* **Database & Auth**: Firebase Firestore & Firebase Authentication
-* **Serverless Backend**: Firebase Cloud Functions (v2) & Next.js Server Actions / API Routes
-* **AI Model**: Gemini 2.5 Flash via Google AI Studio (`@google/genai` and `@google/generative-ai`)
-* **File Uploads**: Cloudinary API (direct signed uploads)
-* **Mapping**: React-Leaflet & OpenStreetMap API
-* **Data Visualization**: Recharts
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 16.2.9 (App Router), React 19 |
+| **Styling** | Tailwind CSS v4 |
+| **Authentication** | Firebase Auth (Email/Password + Custom Claims) |
+| **Database** | Cloud Firestore (real-time NoSQL) |
+| **Image Storage** | Cloudinary (CDN + auto-optimisation) |
+| **AI / Vision** | Google Gemini 2.5 Flash (multimodal) |
+| **Maps** | Leaflet.js (interactive issue maps) |
+| **Charts** | Recharts (analytics dashboard) |
+| **Geolocation** | Browser Geolocation API (two-stage network → GPS) |
+| **PWA** | next-pwa (service worker, installable) |
+| **Hosting** | Vercel (CI/CD from GitHub) + Google Cloud |
 
 ---
 
-## 🚀 Local Development Setup
+## 🚀 Getting Started
 
-### 1. Clone the repository
-Ensure you have Node.js 18+ and npm installed.
+### Prerequisites
+- Node.js 18+
+- Firebase project (Firestore + Authentication enabled)
+- Cloudinary account (free tier works)
+- Google AI Studio API key (Gemini)
 
-### 2. Configure Firebase Project
-1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
-2. Enable **Authentication** (Email/Password provider).
-3. Create a **Firestore Database** in your preferred region. Use the default database ID `(default)`.
-4. Create a Service Account for local development:
-   * Go to Project Settings -> Service Accounts.
-   * Click **Generate New Private Key** and save it in the root of this project as `service-account.json`. *(This file is ignored by Git)*
+### Installation
 
-### 3. Configure Cloudinary
-1. Register a free account at [Cloudinary](https://cloudinary.com).
-2. Go to Settings -> Upload.
-3. Add an **Upload Preset**:
-   * Name it `community_hero` (or update your env file).
-   * Mode: **Unsigned** (allows direct uploads from the client).
-   * Folder: `community-hero-issues` (optional).
+```bash
+git clone https://github.com/your-username/community-hero-ai.git
+cd community-hero-ai
+npm install
+```
 
-### 4. Setup Environment Variables
-Create a `.env.local` file in the root directory:
+### Environment Variables
+
+Create a `.env.local` file in the project root:
 
 ```env
-# Client-side Firebase configs (found in Firebase console -> App settings)
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
-# Cloudinary configs
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=community_hero
+# Cloudinary
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 
-# Gemini API Key (obtained from https://aistudio.google.com)
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+# Google Gemini AI
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_key
+GEMINI_API_KEY=your_gemini_key
 
-# Authority & CommandCenter settings (emails that gain HQ dashboard access)
-NEXT_PUBLIC_AUTHORITY_EMAIL=authority@demo.com
-AUTHORITY_EMAIL=authority@demo.com
-NEXT_PUBLIC_COMMANDCENTER_EMAIL=commandcenter@demo.com
+# Role Access Control
+NEXT_PUBLIC_COMMANDCENTER_EMAIL=commandcenter@yourdomain.com
+NEXT_PUBLIC_DEPARTMENT_EMAILS=roads@d.com:roads|water@d.com:cmwssb|electricity@d.com:electricity|sanitation@d.com:sanitation|traffic@d.com:traffic|publicworks@d.com:publicworks
 
-# Department logins (pipe-separated list mapping email to department key)
-# Keys: roads | electricity | cmwssb | sanitation | traffic | publicworks
-NEXT_PUBLIC_DEPARTMENT_EMAILS=roads@demo.com:roads|electricity@demo.com:electricity|cmwssb@demo.com:cmwssb|sanitation@demo.com:sanitation|traffic@demo.com:traffic|publicworks@demo.com:publicworks
+# Escalation threshold
+ESCALATION_THRESHOLD=3
 ```
 
-### 5. Install Dependencies and Run
+### Run Locally
+
 ```bash
-# Install dependencies
-npm install
-
-# Run dev server
 npm run dev
+# Open http://localhost:3000
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Set Firebase Custom Claims
+
+After creating department and command centre accounts in Firebase Auth:
+
+```bash
+node scripts/set-dept-claims.js
+```
+
+This sets the role claims that enforce role-based access control at the token level.
 
 ---
 
-## ☁️ Deployment on GCP
+## 📁 Project Structure
 
-The app is production-ready for Google Cloud Platform (GCP).
+```
+community-hero-ai/
+├── app/
+│   ├── page.tsx                  # Landing page
+│   ├── sign-in/page.tsx          # 3-role sign-in with claims validation
+│   ├── dashboard/page.tsx        # Citizen dashboard
+│   ├── submit/page.tsx           # Issue submission (photo + GPS + AI)
+│   ├── issues/[id]/              # Issue detail + comments + confirm
+│   ├── department/page.tsx       # Department portal
+│   └── authority/page.tsx        # Command Centre portal
+├── lib/
+│   ├── ai/
+│   │   ├── types.ts              # IIR type definitions (35+ fields)
+│   │   ├── analyzeIssue.ts       # Analysis Agent
+│   │   ├── generateActionPlan.ts # Action Plan Agent
+│   │   ├── generateWorkflowAdvice.ts  # Workflow Advice Agent
+│   │   ├── generateVerification.ts    # Verification Agent
+│   │   ├── generateGovernanceReview.ts # Governance Agent
+│   │   ├── generateMorningBriefing.ts  # Briefing Agent
+│   │   └── *Client.ts            # Browser-side wrappers (NEXT_PUBLIC key)
+│   ├── firebase/
+│   │   ├── client.ts             # Firebase client SDK
+│   │   ├── admin.ts              # Firebase Admin SDK
+│   │   ├── auth.ts               # Auth helpers
+│   │   └── firestore.ts          # Firestore helpers
+│   └── hooks/
+│       ├── useRequireAuth.ts     # Auth guard
+│       └── useUserRole.ts        # Role detection
+├── components/
+│   ├── ThemeToggle.tsx           # Dark mode toggle
+│   └── IssueMap.tsx              # Leaflet map
+├── firestore.rules               # Firestore security rules
+└── scripts/
+    └── set-dept-claims.js        # Firebase custom claims setup
+```
 
-### Option A: Firebase App Hosting (Recommended)
-Firebase App Hosting automatically deploys Next.js apps to Cloud Run.
+---
 
-1. Install the Firebase CLI: `npm install -g firebase-tools`
-2. Run `firebase login` and authorize.
-3. In the project root, run:
-   ```bash
-   firebase apphosting:discover
-   ```
-4. Set your production environment variables (e.g. `GEMINI_API_KEY`, Cloudinary keys) in the Firebase App Hosting console.
+## 🔐 Security Architecture
 
-### Option B: Direct Cloud Run (Docker)
-1. Add `output: 'standalone'` in your `next.config.ts`.
-2. Build your docker container using a standard standalone node Dockerfile.
-3. Deploy to Cloud Run:
-   ```bash
-   gcloud run deploy community-hero-ai --source . --region us-central1 --allow-unauthenticated
-   ```
+```
+LAYER 1 — SIGN-IN PAGE
+└── User selects role (Citizen / Command Centre / Department)
+    └── Firebase signIn() resolves → getIdTokenResult() checks custom claims
+        ├── Claims mismatch → logout() immediately + error message shown
+        └── Claims match → redirect to correct portal only
+
+LAYER 2 — PAGE-LEVEL GUARDS (cannot bypass with direct URL)
+├── /dashboard   → redirects commandcenter→/authority, department→/department
+├── /authority   → redirects citizen→/dashboard, department→/department
+└── /department  → redirects citizen→/dashboard, commandcenter→/authority
+
+LAYER 3 — FIRESTORE SECURITY RULES (server-side, cannot be bypassed)
+├── Issues       → only reporter can create, only department can update status
+├── Confirmations→ only non-reporters can increment count
+├── Comments     → authenticated only, no edit/delete after creation
+└── Delete       → Command Centre role only
+```
+
+---
+
+## 🌐 Live Links
+
+| | |
+|---|---|
+| 🚀 **Production (Vercel)** | [community-hero-ai-kappa.vercel.app](https://community-hero-ai-kappa.vercel.app/) |
+| ☁️ **Google Cloud Shell** | [Cloud Shell Instance](https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority) |
+| 🎬 **Demo Video** | [Watch on Google Drive](https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link) |
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Push notifications — citizens alerted on status change, departments on new assignments
+- [ ] SLA tracking — automatic escalation when department deadlines are missed
+- [ ] Public ward dashboard — read-only transparency view for non-registered citizens
+- [ ] Multi-city support — separate data namespaces per municipal body
+- [ ] WhatsApp / SMS reporting — for non-smartphone users
+- [ ] Contractor accounts — for outsourced large-scale repair projects
+- [ ] Analytics export — PDF / CSV reports for municipal leadership review
+
+---
+
+<div align="center">
+
+<br/>
+
+**Built for smarter cities. Built for citizens.**
+
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/Try%20it%20Live-%20community--hero--ai--kappa.vercel.app-0070f3?style=for-the-badge&logo=vercel&logoColor=white)](https://community-hero-ai-kappa.vercel.app/)
+
+<br/>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=120&section=footer&animation=twinkling" width="100%" />
+
+</div>
