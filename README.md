@@ -34,7 +34,7 @@
 
 ---
 
-## 🎯 What is Community Hero AI?
+##  What is Community Hero AI?
 
 Community Hero AI is a full-stack, AI-powered civic infrastructure management platform that transforms how citizens report local issues — potholes, water leaks, electrical failures, sanitation problems — and how municipal departments resolve them.
 
@@ -42,7 +42,7 @@ It replaces fragmented hotlines and unstructured social media complaints with an
 
 ---
 
-## ✨ Features
+##  Features
 
 <table>
 <tr>
@@ -54,7 +54,7 @@ Every submitted issue is analysed by **Google Gemini 2.5 Flash**. A single photo
 </td>
 <td width="50%" valign="top">
 
-### 📍 Instant GPS Location
+###  Instant GPS Location
 Two-stage geolocation: network/WiFi fix in under 1 second, then silent GPS refinement in the background. Coordinates are reverse-geocoded to a human-readable address and zone type (Residential, Commercial, Healthcare, Industrial). Citizens get their location captured fast — no waiting.
 
 </td>
@@ -62,14 +62,14 @@ Two-stage geolocation: network/WiFi fix in under 1 second, then silent GPS refin
 <tr>
 <td width="50%" valign="top">
 
-### 🏗️ Department AI Workflow
+###  Department AI Workflow
 Departments receive AI-generated **Action Plans** (crew, tools, safety protocols, step-by-step instructions, traffic management) and stage-by-stage **Workflow Advice** as they advance through:
 `Assigned → Acknowledged → Site Inspection → In Progress → Pending Verification`
 
 </td>
 <td width="50%" valign="top">
 
-### 📸 AI Photographic Verification
+###  AI Photographic Verification
 When repair is complete, departments upload an after-photo. The **Verification Agent** cross-checks it against the original IIR and Action Plan, returning a confidence score (0–100%) and recommendation — **Approve / Needs Inspection / Needs Rework** — with detailed reasoning.
 
 </td>
@@ -77,13 +77,13 @@ When repair is complete, departments upload an after-photo. The **Verification A
 <tr>
 <td width="50%" valign="top">
 
-### 🏛️ Governance Review & Accountability
+###  Governance Review & Accountability
 The Command Centre triggers **AI Governance Reviews** on any completed issue — generating quality scores, SLA compliance checks, accountability reports, and public disclosure summaries. Officers can override AI decisions with documented reasons; both the AI recommendation and override are permanently stored.
 
 </td>
 <td width="50%" valign="top">
 
-### 🌅 Morning AI Briefing
+###  Morning AI Briefing
 Every morning, the Command Centre receives a **narrative AI briefing**: open critical issues, overdue repairs, department backlogs, escalation alerts — a full situational picture before the day begins.
 
 </td>
@@ -91,13 +91,13 @@ Every morning, the Command Centre receives a **narrative AI briefing**: open cri
 <tr>
 <td width="50%" valign="top">
 
-### 🔐 3-Layer Role Security
+###  3-Layer Role Security
 **Role selection at sign-in → Firebase custom claims validation → page-level guards.** Citizens, Department staff, and Command Centre are cryptographically separated. Cross-role access is blocked at every layer — selecting the wrong portal and entering valid credentials shows an access denial, not the wrong dashboard.
 
 </td>
 <td width="50%" valign="top">
 
-### 🌙 Dark Mode + PWA
+###  Dark Mode + PWA
 Full dark mode with anti-flash script, localStorage persistence, and system preference detection. Installable as a **Progressive Web App** on any Android or iOS device directly from the browser — no app store required.
 
 </td>
@@ -105,13 +105,13 @@ Full dark mode with anti-flash script, localStorage persistence, and system pref
 <tr>
 <td width="50%" valign="top">
 
-### 👥 Community Confirmation & Escalation
+###  Community Confirmation & Escalation
 Citizens can **confirm** each other's reports. At 3 confirmations, an issue is automatically escalated with an AI-generated **Escalation Brief** (risk summary, affected population estimate, urgency level, recommended action). Critical-severity issues escalate immediately.
 
 </td>
 <td width="50%" valign="top">
 
-### 💬 Community Comments
+###  Community Comments
 Citizens add live comments (up to 300 characters) to any issue — contributing local knowledge, updates, or follow-up context. Comment counts are tracked and displayed. All comments are permanently stored and cannot be edited or deleted after posting (audit integrity).
 
 </td>
@@ -120,33 +120,33 @@ Citizens add live comments (up to 300 characters) to any issue — contributing 
 
 ---
 
-## 👥 User Roles & Access
+##  User Roles & Access
 
 | Role | Portal | Capabilities |
 |------|--------|--------------|
-| 🏘️ **Citizen** | `/dashboard` | Report issues · Track status · Confirm reports · Add comments · View IIR |
-| 🏗️ **Department** | `/department` | Manage assigned issues · Generate AI plans · Advance stages · Submit verification |
-| 🏛️ **Command Centre** | `/authority` | Full oversight · Analytics · Governance review · Morning briefing · Delete issues |
+|  **Citizen** | `/dashboard` | Report issues · Track status · Confirm reports · Add comments · View IIR |
+|  **Department** | `/department` | Manage assigned issues · Generate AI plans · Advance stages · Submit verification |
+|  **Command Centre** | `/authority` | Full oversight · Analytics · Governance review · Morning briefing · Delete issues |
 
 **Department accounts:** Roads · CMWSSB (Water Supply) · Electricity · Sanitation · Traffic · Public Works
 
 ---
 
-## 🔄 Complete Working Flow
+##  Complete Working Flow
 
 ```
 CITIZEN                     DEPARTMENT                  COMMAND CENTRE
   │                              │                             │
-  ├─ 📸 Take / Upload Photo      │                             │
-  ├─ 📍 GPS Location (2-stage)   │                             │
-  ├─ 📝 Description (optional)   │                             │
-  ├─ 🏥 Nearby Context           │                             │
+  ├─  Take / Upload Photo      │                             │
+  ├─  GPS Location (2-stage)   │                             │
+  ├─  Description (optional)   │                             │
+  ├─  Nearby Context           │                             │
   │                              │                             │
   ├── SUBMIT ──────────────────────────────────────────────────────────►
   │                              │                             │
-  ├─ 🤖 Analysis Agent → IIR (35+ fields generated)           │
-  ├─ 🗂️  Issue auto-assigned to responsible department         │
-  ├─ ⚠️  Escalation check (Critical severity / 3 confirms)     │
+  ├─   Analysis Agent → IIR (35+ fields generated)           │
+  ├─   Issue auto-assigned to responsible department         │
+  ├─   Escalation check (Critical severity / 3 confirms)     │
   │                              │                             │
   │                       ┌──────┴──────┐                      │
   │                       │ Receive IIR │                      │
@@ -181,12 +181,12 @@ CITIZEN                     DEPARTMENT                  COMMAND CENTRE
   │                              │                        └─────┬──────────┘
   │                              │                             │
   ◄──────────────────────────────────── Status Updates ─────────┤
-  Issue Resolved ✅ / Rework Ordered 🔁                         │
+  Issue Resolved  / Rework Ordered                          │
 ```
 
 ---
 
-## 🤖 AI Agent Architecture
+##  AI Agent Architecture
 
 | Agent | Trigger | Input | Output |
 |-------|---------|-------|--------|
@@ -203,7 +203,7 @@ CITIZEN                     DEPARTMENT                  COMMAND CENTRE
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -221,7 +221,7 @@ CITIZEN                     DEPARTMENT                  COMMAND CENTRE
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -284,7 +284,7 @@ This sets the role claims that enforce role-based access control at the token le
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 community-hero-ai/
@@ -324,7 +324,7 @@ community-hero-ai/
 
 ---
 
-## 🔐 Security Architecture
+##  Security Architecture
 
 ```
 LAYER 1 — SIGN-IN PAGE
@@ -347,17 +347,17 @@ LAYER 3 — FIRESTORE SECURITY RULES (server-side, cannot be bypassed)
 
 ---
 
-## 🌐 Live Links
+##  Live Links
 
 | | |
 |---|---|
-| 🚀 **Production (Vercel)** | [community-hero-ai-kappa.vercel.app](https://community-hero-ai-kappa.vercel.app/) |
-| ☁️ **Google Cloud Shell** | [Cloud Shell Instance](https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority) |
-| 🎬 **Demo Video** | [Watch on Google Drive](https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link) |
+|  **Production (Vercel)** | [community-hero-ai-kappa.vercel.app](https://community-hero-ai-kappa.vercel.app/) |
+|  **Google Cloud Shell** | [Cloud Shell Instance](https://3000-cs-73db60fe-3c51-465e-bd11-dc1e25e50cb6.cs-asia-southeast1-bool.cloudshell.dev/authority) |
+|  **Demo Video** | [Watch on Google Drive](https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link) |
 
 ---
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [ ] Push notifications — citizens alerted on status change, departments on new assignments
 - [ ] SLA tracking — automatic escalation when department deadlines are missed
