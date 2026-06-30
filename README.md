@@ -212,16 +212,18 @@ CITIZEN                     DEPARTMENT                  COMMAND CENTRE
 | Layer | Technology |
 |-------|------------|
 | **Frontend** | Next.js 16.2.9 (App Router), React 19 |
+| **Backend (API)** | Next.js Serverless API Routes — deployed as serverless functions on Vercel / Google Cloud Run (no traditional server; each API route spins up on demand) |
+| **Backend (Auth)** | Firebase Auth + Firebase Admin SDK — handles sign-in, session tokens, and server-side custom claims (`role: authority`, `role: commandcenter`) |
+| **Backend (Rules)** | Cloud Firestore Security Rules — server-enforced access control; all read/write permissions validated on Google's servers, unreachable by client-side code |
 | **Styling** | Tailwind CSS v4 |
-| **Authentication** | Firebase Auth (Email/Password + Custom Claims) |
-| **Database** | Cloud Firestore (real-time NoSQL) |
+| **Database** | Cloud Firestore (real-time NoSQL, Google Cloud) |
 | **Image Storage** | Cloudinary (CDN + auto-optimisation) |
-| **AI / Vision** | Google Gemini 2.5 Flash (multimodal) |
+| **AI / Vision** | Google Gemini 2.5 Flash (multimodal — processes photos + text) |
 | **Maps** | Leaflet.js (interactive issue maps) |
 | **Charts** | Recharts (analytics dashboard) |
-| **Geolocation** | Browser Geolocation API (two-stage network → GPS) |
-| **PWA** | next-pwa (service worker, installable) |
-| **Hosting** | Vercel (CI/CD from GitHub) + Google Cloud |
+| **Geolocation** | Browser Geolocation API (two-stage: network → GPS) |
+| **PWA** | next-pwa (service worker, offline-ready, installable) |
+| **Hosting** | Vercel (CI/CD from GitHub) + Google Cloud Shell / Cloud Run |
 
 ---
 
