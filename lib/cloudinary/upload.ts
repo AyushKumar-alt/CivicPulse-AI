@@ -1,4 +1,14 @@
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export async function uploadToCloudinary(file: File): Promise<string> {
+  if (!ALLOWED_TYPES.has(file.type)) {
+    throw new Error("Only JPEG, PNG, WEBP, and GIF images are allowed.");
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error("Image must be smaller than 10 MB.");
+  }
+
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 

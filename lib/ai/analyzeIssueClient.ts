@@ -1,8 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Timestamp, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
 import { reverseGeocode, type GeocodedLocation } from "@/lib/geocode";
-import { mapToDepartment } from "@/lib/departments";
 import { getRegionalAuthorities, type RegionalAuthorities } from "@/lib/municipal-authorities";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -55,6 +54,15 @@ const GEMINI_TIMEOUT_MS = 25_000;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+// M3: Strip control chars and naive prompt-injection patterns from user text
+function sanitizeUserInput(input: string, maxLen = 500): string {
+  return input
+    .slice(0, maxLen)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/^(ignore|forget|system|override|you are|disregard|stop being|new instruction|act as|pretend|roleplay).*/gim, "[filtered]")
+    .trim();
+}
+
 function mimeTypeFromUrl(url: string): string {
   const ext = url.split("?")[0].split(".").pop()?.toLowerCase();
   if (ext === "png") return "image/png";
@@ -100,8 +108,9 @@ function buildPrompt(
       ].filter(Boolean).join("\n")
     : `GPS coordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 
-  const contextSection = contextHint
-    ? `\nCITIZEN-PROVIDED CONTEXT HINT: "${contextHint}"\nNOTE: This is optional user-provided context. The address and detected landmark above are stronger signals.`
+  const safeHint = contextHint ? sanitizeUserInput(contextHint, 200) : null;
+  const contextSection = safeHint
+    ? `\nCITIZEN-PROVIDED CONTEXT HINT: "${safeHint}"\nNOTE: This is optional user-provided context. The address and detected landmark above are stronger signals.`
     : `\nNo additional context hint was provided by the citizen.`;
 
   const authorityOptions = [
@@ -304,7 +313,8 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
 
     const geo = await reverseGeocode(lat, lng);
     const authorities = getRegionalAuthorities(geo?.city ?? "", geo?.state ?? "");
-    const prompt = buildPrompt(description.trim() || "No description provided.", lat, lng, geo, contextHint ?? null, authorities);
+    const safeDescription = sanitizeUserInput(description) || "No description provided.";
+    const prompt = buildPrompt(safeDescription, lat, lng, geo, contextHint ?? null, authorities);
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     let aiResult: AiResult;
@@ -376,7 +386,6 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     if (!Array.isArray(aiResult.verification_checkpoints)) aiResult.verification_checkpoints = [];
     aiResult.routing_reasoning = String(aiResult.routing_reasoning ?? "");
 
-    const dept = mapToDepartment(aiResult.responsible_authority, aiResult.issue_type);
     const now = Timestamp.now();
 
     await updateDoc(issueRef, {
@@ -393,15 +402,7 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
         "location.zone_type": geo.zone_type,
       } : {}),
 
-      // Department assignment
-      assigned_department: dept.key,
-      assigned_department_name: dept.name,
-      assigned_department_email: dept.email,
-      assigned_at: now,
-      assigned_by: "AI Analysis Agent",
-      assignment_method: "AI Analysis + Rule Mapping",
-
-      // AI blob
+      // AI blob (H2: assignment fields removed — written server-side via /api/issue/[id]/assign)
       ai: {
         issue_type: aiResult.issue_type,
         severity: aiResult.severity,
@@ -439,6 +440,14 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     });
 
     console.info(`[${issueId}] Client analysis complete: ${aiResult.issue_type} / ${aiResult.severity} / priority=${aiResult.priority_score}`);
+
+    // H2: Trigger server-side department assignment (admin SDK bypasses Firestore rules)
+    auth.currentUser?.getIdToken().then((token) => {
+      fetch(`/api/issue/${issueId}/assign`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch((e: unknown) => console.warn(`[${issueId}] Assign route call failed:`, e));
+    }).catch((e: unknown) => console.warn(`[${issueId}] Could not get ID token for assign:`, e));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[${issueId}] Client analysis failed:`, message);

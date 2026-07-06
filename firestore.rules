@@ -17,8 +17,20 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.reporter_uid == request.auth.uid;
 
-      // Authority (department) can update status and department workflow fields
+      // H2 Fix: Reporter writes AI analysis result ONLY.
+      // assigned_department* fields are written server-side via admin SDK (bypasses rules).
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.reporter_uid
+        && resource.data.status == "processing"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "ai", "status", "updated_at",
+          "area_category", "area_confidence", "area_reasoning", "affected_entity_type",
+          "location"
+        ]);
+
+      // H3 Fix: Department can ONLY update their own assigned issue (token.dept must match).
       allow update: if request.auth.token.role == "authority"
+        && request.auth.token.dept == resource.data.assigned_department
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "status", "updated_at",
           "department_status", "department_progress",
@@ -26,7 +38,7 @@ service cloud.firestore {
           "verification"
         ]);
 
-      // Command Centre can update status, governance, and department workflow fields
+      // Command Centre can update status and governance fields.
       allow update: if request.auth.token.role == "commandcenter"
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "status", "updated_at", "resolved_at",
@@ -34,26 +46,29 @@ service cloud.firestore {
           "governance"
         ]);
 
-      // Reporter can write AI analysis results (analysis runs client-side, result written here)
-      allow update: if request.auth != null
-        && request.auth.uid == resource.data.reporter_uid
-        && resource.data.status == "processing"
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "ai", "status", "updated_at",
-          "area_category", "area_confidence", "area_reasoning", "affected_entity_type",
-          "assigned_department", "assigned_department_name", "assigned_department_email",
-          "assigned_at", "assigned_by", "assignment_method", "location"
-        ]);
-
-      allow delete: if request.auth.token.role == "commandcenter";
-
-      // Any authenticated non-reporter can increment confirmation count + trigger escalation
+      // H1 Fix: Community confirmation.
+      // - confirmation_count must increment by exactly 1 (prevents count=9999 attack).
+      // - escalated=true only allowed when new count reaches the threshold of 3.
       allow update: if request.auth != null
         && request.auth.uid != resource.data.reporter_uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "confirmation_count", "escalated", "escalated_at", "escalation_reason",
+          "confirmation_count", "escalated", "escalated_at", "escalation_reason", "updated_at"
+        ])
+        && request.resource.data.confirmation_count == resource.data.confirmation_count + 1
+        && (
+          !("escalated" in request.resource.data.diff(resource.data).affectedKeys())
+          || !request.resource.data.escalated
+          || request.resource.data.confirmation_count >= 3
+        );
+
+      // Comment count: separate rule, also enforces increment-by-1.
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "comment_count", "updated_at"
-        ]);
+        ])
+        && request.resource.data.comment_count == resource.data.comment_count + 1;
+
+      allow delete: if request.auth.token.role == "commandcenter";
 
       match /comments/{commentId} {
         allow read: if request.auth != null;
@@ -67,12 +82,10 @@ service cloud.firestore {
 
       match /confirmations/{uid} {
         allow read: if request.auth != null;
-
         allow create: if request.auth != null
           && request.auth.uid == uid
           && request.auth.uid != get(/databases/$(database)/documents/issues/$(issueId)).data.reporter_uid
           && !exists(/databases/$(database)/documents/issues/$(issueId)/confirmations/$(request.auth.uid));
-
         allow update, delete: if false;
       }
     }
