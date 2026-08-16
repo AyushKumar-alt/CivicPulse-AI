@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/🌐%20Live%20Demo-community--hero--ai-0070f3?style=for-the-badge&logoColor=white" alt="Live Demo" />
 </a>
 &nbsp;&nbsp;
-<a href="https://drive.google.com/file/d/1_-7jrisPD6U-JF4dw-6rlBLbE_Gk1oeD/view?usp=drive_link">
+<a href="https://drive.google.com/file/d/1rTabPAVObFWzZm50RvZgDcDDuMChgTty/view?usp=sharing"> 
   <img src="https://img.shields.io/badge/▶%20Demo%20Video-Watch%20Now-FF0000?style=for-the-badge&logo=google-drive&logoColor=white" alt="Demo Video" />
 </a>
 &nbsp;&nbsp;
