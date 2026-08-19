@@ -18,6 +18,7 @@ import {
 } from "@/lib/departments";
 import type { DepartmentInfo } from "@/lib/departments";
 import { getRegionalAgencyLabel } from "@/lib/municipal-authorities";
+import { getAgencyByEmail } from "@/lib/municipal";
 import {
   collection, getDocs, doc, updateDoc, query,
   where, orderBy, limit, arrayUnion, Timestamp,
@@ -1256,6 +1257,8 @@ export default function DepartmentPage() {
         if (ts && typeof ts === "object" && "toMillis" in ts) return (ts as { toMillis: () => number }).toMillis();
         return null;
       }
+      const currentAgency = getAgencyByEmail(user.email ?? "");
+
       const issues = snap.docs
         .map((d) => {
           const data = d.data();
@@ -1277,6 +1280,8 @@ export default function DepartmentPage() {
             comment_count: (data.comment_count as number) ?? 0,
             assigned_department: (data.assigned_department as string) ?? null,
             assigned_department_name: (data.assigned_department_name as string) ?? null,
+            assigned_agency_id: (data.assigned_agency_id as string) ?? null,
+            city_code: (data.city_code as string) ?? null,
             assigned_at: tsToMs(data.assigned_at),
             assignment_method: (data.assignment_method as string) ?? null,
             department_status: (data.department_status as string) ?? null,
@@ -1289,6 +1294,21 @@ export default function DepartmentPage() {
               ? { ...(data.ai as Record<string, unknown>), generated_at: tsToMs((data.ai as Record<string, unknown>).generated_at) }
               : null,
           } as unknown as IssueRecord;
+        })
+        .filter((issue) => {
+          const item = issue as unknown as { assigned_agency_id?: string; location?: { address?: string; area_name?: string } };
+          if (item.assigned_agency_id) {
+            return item.assigned_agency_id === currentAgency.agency_id;
+          }
+          const fullAddr = `${item.location?.address || ""} ${item.location?.area_name || ""}`.toLowerCase();
+          if (currentAgency.city === "bengaluru") {
+            if (fullAddr.includes("chennai") || fullAddr.includes("cmwssb") || fullAddr.includes("delhi")) return false;
+          } else if (currentAgency.city === "chennai") {
+            if (fullAddr.includes("bengaluru") || fullAddr.includes("kodagalahatti") || fullAddr.includes("hunasamaranahalli") || fullAddr.includes("delhi")) return false;
+          } else if (currentAgency.city === "delhi") {
+            if (fullAddr.includes("bengaluru") || fullAddr.includes("chennai")) return false;
+          }
+          return true;
         })
         .sort((a, b) => ((b.submitted_at ?? 0) as number) - ((a.submitted_at ?? 0) as number));
       setIssues(issues);

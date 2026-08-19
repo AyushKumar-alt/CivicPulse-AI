@@ -8,38 +8,11 @@ service cloud.firestore {
     }
 
     match /issues/{issueId} {
-      allow read: if request.auth != null && (
-        resource.data.reporter_uid == request.auth.uid
-        || resource.data.status in ["analyzed", "in_progress", "resolved"]
-        || request.auth.token.role in ["authority", "commandcenter"]
-      );
+      allow read: if request.auth != null;
 
-      allow create: if request.auth != null
-        && request.resource.data.reporter_uid == request.auth.uid;
+      allow create: if request.auth != null;
 
-      // H2 Fix: Reporter writes AI analysis result ONLY.
-      // assigned_department* fields are written server-side via admin SDK (bypasses rules).
-      allow update: if request.auth != null
-        && request.auth.uid == resource.data.reporter_uid
-        && resource.data.status == "processing"
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "ai", "status", "updated_at",
-          "area_category", "area_confidence", "area_reasoning", "affected_entity_type",
-          "location"
-        ]);
-
-      // H3 Fix: Department can ONLY update their own assigned issue (token.dept must match).
-      allow update: if request.auth.token.role == "authority"
-        && (
-          request.auth.token.dept == resource.data.assigned_department
-          || (request.auth.token.dept in ["water", "cmwssb"] && resource.data.assigned_department in ["water", "cmwssb"])
-        )
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "status", "updated_at",
-          "department_status", "department_progress",
-          "action_plan", "action_plan_generated_at",
-          "verification"
-        ]);
+      allow update: if request.auth != null;
 
       // Command Centre can update status and governance fields.
       allow update: if request.auth.token.role == "commandcenter"

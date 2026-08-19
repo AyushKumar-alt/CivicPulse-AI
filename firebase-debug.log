@@ -1,0 +1,42 @@
+[debug] [2026-08-19T18:00:09.873Z] ----------------------------------------------------------------------
+[debug] [2026-08-19T18:00:09.877Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\calpo\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:rules
+[debug] [2026-08-19T18:00:09.878Z] CLI Version:   15.22.1
+[debug] [2026-08-19T18:00:09.879Z] Platform:      win32
+[debug] [2026-08-19T18:00:09.879Z] Node Version:  v22.20.0
+[debug] [2026-08-19T18:00:09.880Z] Detected Agent: antigravity
+[debug] [2026-08-19T18:00:09.880Z] Time:          Wed Aug 19 2026 23:30:09 GMT+0530 (India Standard Time)
+[debug] [2026-08-19T18:00:09.881Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-19T18:00:12.786Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-19T18:00:12.786Z] > authorizing via signed-in user (ayushkumarjnv14@gmail.com)
+[debug] [2026-08-19T18:00:12.787Z] [iam] checking project community-hero-ai-1d497 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-08-19T18:00:12.790Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:12.791Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:12.793Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/community-hero-ai-1d497:testIamPermissions [none]
+[debug] [2026-08-19T18:00:12.793Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/community-hero-ai-1d497:testIamPermissions  x-goog-user-project=community-hero-ai-1d497
+[debug] [2026-08-19T18:00:12.793Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/community-hero-ai-1d497:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-08-19T18:00:16.540Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/community-hero-ai-1d497:testIamPermissions 200
+[debug] [2026-08-19T18:00:16.541Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/community-hero-ai-1d497:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'community-hero-ai-1d497'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-08-19T18:00:16.556Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:16.557Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:16.557Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/community-hero-ai-1d497/databases/default [none]
+[debug] [2026-08-19T18:00:17.746Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/community-hero-ai-1d497/databases/default 200
+[debug] [2026-08-19T18:00:17.747Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/community-hero-ai-1d497/databases/default {"name":"projects/community-hero-ai-1d497/databases/default","uid":"8691c819-2666-4b23-976c-eecf7be0eb6f","createTime":"2026-06-23T13:12:25.176861Z","updateTime":"2026-06-23T13:12:25.176861Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"OPTIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-08-19T17:00:17.067653Z","appEngineIntegrationMode":"DISABLED","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"ENTERPRISE","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","firestoreDataAccessMode":"DATA_ACCESS_MODE_ENABLED","mongodbCompatibleDataAccessMode":"DATA_ACCESS_MODE_DISABLED","etag":"IJTqmeiirZYDMMSf7IOKnpUD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-08-19T18:00:17.751Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:17.752Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:17.752Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/community-hero-ai-1d497:test [none]
+[debug] [2026-08-19T18:00:17.752Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/community-hero-ai-1d497:test [omitted]
+[debug] [2026-08-19T18:00:31.434Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/community-hero-ai-1d497:test 200
+[debug] [2026-08-19T18:00:31.434Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/community-hero-ai-1d497:test {}
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-08-19T18:00:31.438Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:31.438Z] Checked if tokens are valid: true, expires at: 1787165984412
+[debug] [2026-08-19T18:00:31.439Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/community-hero-ai-1d497/releases pageSize=10&pageToken=

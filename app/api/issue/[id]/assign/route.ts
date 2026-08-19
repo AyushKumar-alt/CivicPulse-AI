@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin";
 import { mapToDepartment } from "@/lib/departments";
+import { resolveCityFromAddress, resolveCityFromCoords, resolveAgencyForIssue, DepartmentCategory } from "@/lib/municipal";
 
 // H2 Fix: department assignment runs server-side via admin SDK.
 // The client writes the AI analysis result; this route reads it and assigns the department.
@@ -54,16 +55,24 @@ export async function POST(
     return Response.json({ error: "No AI analysis result found" }, { status: 400 });
   }
 
+  const address = (data.location?.address as string) || (data.location?.area_name as string) || "";
+  const lat = Number(data.location?.lat ?? 13.1473);
+  const lng = Number(data.location?.lng ?? 77.6200);
+
+  const cityCode = resolveCityFromAddress(address) || resolveCityFromCoords(lat, lng);
   const dept = mapToDepartment(responsibleAuthority, issueType ?? "");
+  const agency = resolveAgencyForIssue(cityCode, dept.key as DepartmentCategory);
 
   // Admin SDK write — bypasses Firestore rules intentionally
   await ref.update({
     assigned_department: dept.key,
-    assigned_department_name: dept.name,
-    assigned_department_email: dept.email,
+    assigned_department_name: agency.name,
+    assigned_department_email: agency.email_aliases[0] ?? dept.email,
+    assigned_agency_id: agency.agency_id,
+    city_code: cityCode,
     assigned_at: Timestamp.now(),
     assigned_by: "AI Analysis Agent (server)",
-    assignment_method: "AI Analysis + Rule Mapping",
+    assignment_method: "AI Analysis + Municipal Agency Routing",
     updated_at: Timestamp.now(),
   });
 
