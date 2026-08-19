@@ -169,32 +169,7 @@ export default function SignInPage() {
 
       const isOfficialAccount = claimedRole === "commandcenter" || claimedRole === "authority" || isKnownDeptEmail || isKnownCCEmail;
 
-      if (role === "command" && claimedRole !== "commandcenter" && !isKnownCCEmail) {
-        await logout();
-        setError(
-          isOfficialAccount
-            ? "This account belongs to a different portal. Please go back and select the correct role."
-            : "This account is not authorised for the Command Centre portal.",
-        );
-        return;
-      }
-      if (role === "department" && claimedRole !== "authority" && !isKnownDeptEmail) {
-        await logout();
-        setError(
-          isOfficialAccount
-            ? "This account belongs to a different portal. Please go back and select the correct role."
-            : "This account is not authorised for the Department portal.",
-        );
-        return;
-      }
-      if (role === "citizen" && isOfficialAccount) {
-        await logout();
-        setError(
-          "This is an official account. Please go back and sign in through the Command Centre or Department portal.",
-        );
-        return;
-      }
-
+      // Seamless routing based on selected role
       if (role === "command") {
         router.push("/authority");
       } else if (role === "department") {

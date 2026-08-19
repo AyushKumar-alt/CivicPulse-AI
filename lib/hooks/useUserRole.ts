@@ -37,18 +37,28 @@ function parseDeptEmails(raw: string): Record<string, DepartmentKey> {
 // Parsed once at module load (env vars are static)
 const DEPT_EMAIL_MAP = parseDeptEmails(DEPT_EMAILS_RAW);
 
+function inferDeptFromEmail(email: string): DepartmentKey | undefined {
+  if (/bescom|electricity|power/i.test(email)) return "electricity";
+  if (/bwssb|cmwssb|djb|water|sewer/i.test(email)) return "water";
+  if (/bbmp|sanitation|waste|garbage/i.test(email)) return "sanitation";
+  if (/roads|highway|pavement/i.test(email)) return "roads";
+  if (/traffic|signal/i.test(email)) return "traffic";
+  if (/publicworks|authority|works/i.test(email)) return "publicworks";
+  return undefined;
+}
+
 export function useUserRole(user: User | null): UserRoleInfo {
   return useMemo<UserRoleInfo>(() => {
     if (!user?.email) return { role: "citizen" };
     const email = user.email.toLowerCase();
 
-    // Command center — supports multiple emails via comma/pipe-separated env var
-    if (COMMANDCENTER_EMAIL_LIST.includes(email)) {
+    // Command center — supports multiple emails via env var or command substring
+    if (COMMANDCENTER_EMAIL_LIST.includes(email) || /command/i.test(email)) {
       return { role: "commandcenter" };
     }
 
-    // Department user
-    const deptKey = DEPT_EMAIL_MAP[email];
+    // Department user — check map or infer from email alias
+    const deptKey = DEPT_EMAIL_MAP[email] ?? inferDeptFromEmail(email);
     if (deptKey) return { role: "department", department: deptKey };
 
     return { role: "citizen" };
