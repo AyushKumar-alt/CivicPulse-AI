@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, createAccount, resetPassword, logout } from "@/lib/firebase/auth";
+import { resolveUserRoleSync } from "@/lib/auth";
 
 type RoleType = "citizen" | "command" | "department";
 type FormMode = "signin" | "signup" | "reset";
@@ -160,14 +161,24 @@ export default function SignInPage() {
         }
       }
 
-      // Enforce role ↔ claim match
-      const token = await fbUser.getIdTokenResult();
-      const claimedRole = token.claims.role as string | undefined;
+      // Enforce strict portal access controls via RBAC engine
+      const roleRes = resolveUserRoleSync(fbUser);
 
-      const isKnownDeptEmail = /bescom|bwssb|bbmp|djb|cmwssb|roads|water|electricity|sanitation|traffic|publicworks|authority/i.test(email);
-      const isKnownCCEmail = /command/i.test(email);
-
-      const isOfficialAccount = claimedRole === "commandcenter" || claimedRole === "authority" || isKnownDeptEmail || isKnownCCEmail;
+      if (role === "citizen" && roleRes.isOfficial) {
+        await logout();
+        setError("This is an official account. Please sign in through the Department or Command Centre portal.");
+        return;
+      }
+      if (role === "department" && !roleRes.isOfficial) {
+        await logout();
+        setError("This account is a Citizen account. Please switch to the Citizen portal tab.");
+        return;
+      }
+      if (role === "command" && roleRes.role !== "commandcenter") {
+        await logout();
+        setError("This account is not authorized for the Command Centre portal.");
+        return;
+      }
 
       // Seamless routing based on selected role
       if (role === "command") {
