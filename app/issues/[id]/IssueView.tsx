@@ -208,13 +208,31 @@ export default function IssueView({ id }: { id: string }) {
   async function handleReAnalyze() {
     setReAnalyzing(true);
     try {
-      await fetch("/api/analyze", {
+      const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ issueId: id, force: true }),
       });
+      if (!res.ok) {
+        throw new Error(`Server endpoint returned ${res.status}`);
+      }
     } catch (err) {
-      console.error(err);
+      console.warn("Server re-analysis failed, using client-side Gemini engine:", err);
+      if (issue) {
+        try {
+          const { analyzeIssueClient } = await import("@/lib/ai/analyzeIssueClient");
+          await analyzeIssueClient({
+            issueId: id,
+            imageUrl: issue.image_url,
+            description: issue.raw_description || "",
+            lat: issue.location?.lat ?? 0,
+            lng: issue.location?.lng ?? 0,
+            contextHint: issue.context_hint ?? null,
+          });
+        } catch (clientErr) {
+          console.error("Client re-analysis failed:", clientErr);
+        }
+      }
     } finally {
       setReAnalyzing(false);
     }
