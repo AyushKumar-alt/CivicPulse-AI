@@ -156,27 +156,9 @@ export default function SubmitPage() {
         contextHint: resolvedHint,
       });
 
-      // Trigger server-side Gemini 2.5 Flash analysis (/api/analyze)
-      let serverAnalysisOk = false;
+      // Run Gemini 2.5 Flash AI analysis directly and await completion before navigating
       try {
-        const analyzeRes = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ issueId }),
-        });
-        serverAnalysisOk = analyzeRes.ok;
-        if (!analyzeRes.ok) {
-          const errBody = await analyzeRes.text().catch(() => "");
-          console.warn(`Server /api/analyze returned ${analyzeRes.status}: ${errBody}`);
-        }
-      } catch (analyzeErr) {
-        console.warn("Server analysis network error:", analyzeErr);
-      }
-
-      // Fallback to client-side Gemini if server analysis failed
-      if (!serverAnalysisOk) {
-        console.info("Falling back to client-side Gemini analysis...");
-        analyzeIssueClient({
+        await analyzeIssueClient({
           issueId,
           imageBase64: imageBase64 ?? "",
           imageMimeType,
@@ -184,7 +166,9 @@ export default function SubmitPage() {
           lat: location.lat,
           lng: location.lng,
           contextHint: resolvedHint ?? null,
-        }).catch(console.error);
+        });
+      } catch (clientErr) {
+        console.error("Client Gemini analysis error:", clientErr);
       }
 
       router.push(`/issues/${issueId}`);
@@ -412,7 +396,7 @@ export default function SubmitPage() {
             className="w-full bg-blue-600 text-white rounded-xl px-4 py-3.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {submitting
-              ? "Submitting..."
+              ? "⚡ Analyzing issue with Gemini 2.5 Flash..."
               : imageUploading
               ? "Waiting for image upload..."
               : "Submit Report"}

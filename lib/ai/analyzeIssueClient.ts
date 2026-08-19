@@ -316,7 +316,19 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     const safeDescription = sanitizeUserInput(description) || "No description provided.";
     const prompt = buildPrompt(safeDescription, lat, lng, geo, contextHint ?? null, authorities);
 
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    let apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      try {
+        const keyRes = await fetch("/api/get-gemini-key");
+        if (keyRes.ok) {
+          const keyData = (await keyRes.json()) as { key?: string };
+          apiKey = keyData.key ?? "";
+        }
+      } catch (keyErr) {
+        console.warn("Failed to fetch Gemini API key from server route:", keyErr);
+      }
+    }
+
     let aiResult: AiResult | null = null;
     let usedFallback = false;
 

@@ -464,22 +464,6 @@ export default function IssueView({ id }: { id: string }) {
             </span>
           </div>
         )}
-        {(ai.summary?.includes("fallback") || ai.summary?.includes("unavailable")) && (
-          <div className="mt-3 mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-xs font-bold text-indigo-900">⚡ Upgrade to Gemini 2.5 Flash Multimodal Report</p>
-              <p className="text-xs text-indigo-700 mt-0.5">Click below to generate full AI priority scoring, severity estimation, and action plan.</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleReAnalyze}
-              disabled={reAnalyzing}
-              className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50 shadow-sm"
-            >
-              {reAnalyzing ? "Running Gemini 2.5 Flash..." : "✨ Run Gemini 2.5 Flash"}
-            </button>
-          </div>
-        )}
 
         <p className="text-sm text-gray-700 leading-relaxed mt-4 mb-6">{ai.summary}</p>
 
