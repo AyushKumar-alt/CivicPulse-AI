@@ -144,8 +144,8 @@ export const DEPARTMENT_LIST: DepartmentInfo[] = [
 
 // Deterministic routing: maps responsible_authority / issue_type → universal department key
 const ROUTING_RULES: Array<[RegExp, DepartmentKey]> = [
+  [/pole|electric|streetlight|street\s*light|lighting|power|tneb|bescom|tesspdcl|msedcl|tata power|adani|lamp post|wire|cable|high-tension/i, "electricity"],
   [/traffic|signal|junction|intersection/i, "traffic"],
-  [/electric|streetlight|street\s*light|lighting|power|tneb|bescom|tesspdcl|msedcl|tata power|adani|lamp post/i, "electricity"],
   [/water|sewerage|sewage|drainage|pipeline|leakage|waterlogging|flooding|cmwssb|bwssb|djb|hmwssb|jal board|storm drain/i, "water"],
   [/sanit|garbage|waste|rubbish|trash|solid waste|dump|litter|sweeping|bbmp solid waste|mcd/i, "sanitation"],
   [/road|highway|pothole|footpath|pavement|sidewalk|bitumen|tar road|asphalt|nhai|transport|bbmp/i, "roads"],

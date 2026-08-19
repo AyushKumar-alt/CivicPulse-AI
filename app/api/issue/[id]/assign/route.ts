@@ -48,19 +48,18 @@ export async function POST(
     return Response.json({ ok: true, assigned: data.assigned_department });
   }
 
-  const responsibleAuthority = data.ai?.responsible_authority as string | undefined;
-  const issueType = data.ai?.issue_type as string | undefined;
-
-  if (!responsibleAuthority) {
-    return Response.json({ error: "No AI analysis result found" }, { status: 400 });
-  }
+  const responsibleAuthority = (data.ai?.responsible_authority as string) || "";
+  const issueType = (data.ai?.issue_type as string) || "";
+  const summary = (data.ai?.summary as string) || "";
+  const rawDesc = (data.raw_description as string) || "";
+  const combinedText = `${responsibleAuthority} ${issueType} ${summary} ${rawDesc}`;
 
   const address = (data.location?.address as string) || (data.location?.area_name as string) || "";
   const lat = Number(data.location?.lat ?? 13.1473);
   const lng = Number(data.location?.lng ?? 77.6200);
 
   const cityCode = resolveCityFromAddress(address) || resolveCityFromCoords(lat, lng);
-  const dept = mapToDepartment(responsibleAuthority, issueType ?? "");
+  const dept = mapToDepartment(responsibleAuthority, combinedText);
   const agency = resolveAgencyForIssue(cityCode, dept.key as DepartmentCategory);
 
   // Admin SDK write — bypasses Firestore rules intentionally
