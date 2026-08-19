@@ -317,38 +317,59 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     const prompt = buildPrompt(safeDescription, lat, lng, geo, contextHint ?? null, authorities);
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    let aiResult: AiResult;
+    let aiResult: AiResult | null = null;
     let usedFallback = false;
 
-    if (!apiKey || !imageBase64) {
-      if (!apiKey) console.warn(`[${issueId}] NEXT_PUBLIC_GEMINI_API_KEY not set — using deterministic fallback.`);
+    // Try client-side Gemini if key is present
+    if (apiKey && imageBase64) {
+      const ai = new GoogleGenAI({ apiKey });
+      const modelsToTry = [process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+      for (const m of modelsToTry) {
+        try {
+          aiResult = await callWithRetry(async () => {
+            const response = await withTimeout(
+              ai.models.generateContent({
+                model: m,
+                contents: [{ role: "user", parts: [
+                  { inlineData: { data: imageBase64, mimeType: imageMimeType } },
+                  { text: prompt },
+                ]}],
+                config: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 },
+              }),
+              GEMINI_TIMEOUT_MS,
+              "Gemini generateContent",
+            );
+            const rawText = (response.text ?? "").trim();
+            return JSON.parse(extractJson(rawText)) as AiResult;
+          }, issueId);
+          if (aiResult) break;
+        } catch (geminiErr) {
+          const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+          console.warn(`[${issueId}] Model ${m} failed (${msg.slice(0, 80)}).`);
+        }
+      }
+    }
+
+    // Server delegation fallback if client Gemini was unavailable or failed
+    if (!aiResult) {
+      try {
+        console.info(`[${issueId}] Delegating Gemini analysis to server route /api/analyze...`);
+        const srvRes = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ issueId }),
+        });
+        if (srvRes.ok) {
+          // Server endpoint ran analyzeIssue() and updated Firestore
+          return;
+        }
+      } catch (srvErr) {
+        console.warn(`[${issueId}] Server /api/analyze call failed:`, srvErr);
+      }
+
+      // Final fallback if both client and server Gemini calls fail
       aiResult = deterministicAnalysis(description);
       usedFallback = true;
-    } else {
-      const ai = new GoogleGenAI({ apiKey });
-      try {
-        aiResult = await callWithRetry(async () => {
-          const response = await withTimeout(
-            ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: [{ role: "user", parts: [
-                { inlineData: { data: imageBase64, mimeType: imageMimeType } },
-                { text: prompt },
-              ]}],
-              config: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 },
-            }),
-            GEMINI_TIMEOUT_MS,
-            "Gemini generateContent",
-          );
-          const rawText = (response.text ?? "").trim();
-          return JSON.parse(extractJson(rawText)) as AiResult;
-        }, issueId);
-      } catch (geminiErr) {
-        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-        console.warn(`[${issueId}] Gemini failed (${msg.slice(0, 80)}), using deterministic fallback.`);
-        aiResult = deterministicAnalysis(description);
-        usedFallback = true;
-      }
     }
 
     // Validate and sanitise

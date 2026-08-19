@@ -463,37 +463,49 @@ export async function analyzeIssue(issueId: string): Promise<void> {
     let aiResult: AiResult;
     let usedFallback = false;
 
-    try {
-      aiResult = await callWithRetry(async () => {
-        const response = await withTimeout(
-          ai.models.generateContent({
-            model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { inlineData: { data: imageBase64, mimeType } },
-                  { text: prompt },
-                ],
-              },
-            ],
-            config: {
-              responseMimeType: "application/json",
-              temperature: 0.1,
-              maxOutputTokens: 4096,
-            },
-          }),
-          GEMINI_TIMEOUT_MS,
-          "Gemini generateContent",
-        );
+    const modelsToTry = [process.env.GEMINI_MODEL ?? "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    let lastError: unknown = null;
 
-        const rawText = (response.text ?? "").trim();
-        const jsonText = extractJson(rawText);
-        return JSON.parse(jsonText) as AiResult;
-      }, issueId);
-    } catch (geminiErr) {
-      const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-      console.warn(`[${issueId}] Gemini failed (${msg.slice(0, 80)}), using deterministic fallback.`);
+    for (const m of modelsToTry) {
+      try {
+        aiResult = await callWithRetry(async () => {
+          const response = await withTimeout(
+            ai.models.generateContent({
+              model: m,
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    { inlineData: { data: imageBase64, mimeType } },
+                    { text: prompt },
+                  ],
+                },
+              ],
+              config: {
+                responseMimeType: "application/json",
+                temperature: 0.1,
+                maxOutputTokens: 4096,
+              },
+            }),
+            GEMINI_TIMEOUT_MS,
+            "Gemini generateContent",
+          );
+
+          const rawText = (response.text ?? "").trim();
+          const jsonText = extractJson(rawText);
+          return JSON.parse(jsonText) as AiResult;
+        }, issueId);
+        if (aiResult) break;
+      } catch (geminiErr) {
+        lastError = geminiErr;
+        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        console.warn(`[analyzeIssue][${issueId}] Model ${m} failed (${msg.slice(0, 80)}).`);
+      }
+    }
+
+    if (!aiResult) {
+      const msg = lastError instanceof Error ? lastError.message : String(lastError);
+      console.warn(`[${issueId}] All Gemini models failed (${msg.slice(0, 80)}), using deterministic fallback.`);
       aiResult = deterministicAnalysis(description.trim());
       usedFallback = true;
     }
