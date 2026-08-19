@@ -157,15 +157,25 @@ export default function SubmitPage() {
       });
 
       // Trigger server-side Gemini 2.5 Flash analysis (/api/analyze)
+      let serverAnalysisOk = false;
       try {
-        await fetch("/api/analyze", {
+        const analyzeRes = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ issueId }),
         });
+        serverAnalysisOk = analyzeRes.ok;
+        if (!analyzeRes.ok) {
+          const errBody = await analyzeRes.text().catch(() => "");
+          console.warn(`Server /api/analyze returned ${analyzeRes.status}: ${errBody}`);
+        }
       } catch (analyzeErr) {
-        console.warn("Server analysis trigger fallback:", analyzeErr);
-        // Fallback to client-side trigger if server fetch fails
+        console.warn("Server analysis network error:", analyzeErr);
+      }
+
+      // Fallback to client-side Gemini if server analysis failed
+      if (!serverAnalysisOk) {
+        console.info("Falling back to client-side Gemini analysis...");
         analyzeIssueClient({
           issueId,
           imageBase64: imageBase64 ?? "",
