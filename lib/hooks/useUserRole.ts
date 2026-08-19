@@ -37,14 +37,14 @@ function parseDeptEmails(raw: string): Record<string, DepartmentKey> {
 // Parsed once at module load (env vars are static)
 const DEPT_EMAIL_MAP = parseDeptEmails(DEPT_EMAILS_RAW);
 
-function inferDeptFromEmail(email: string): DepartmentKey | undefined {
+function inferDeptFromEmail(email: string): DepartmentKey {
   if (/bescom|electricity|power/i.test(email)) return "electricity";
   if (/bwssb|cmwssb|djb|water|sewer/i.test(email)) return "water";
   if (/bbmp|sanitation|waste|garbage/i.test(email)) return "sanitation";
   if (/roads|highway|pavement/i.test(email)) return "roads";
   if (/traffic|signal/i.test(email)) return "traffic";
-  if (/publicworks|authority|works/i.test(email)) return "publicworks";
-  return undefined;
+  if (/publicworks|works/i.test(email)) return "publicworks";
+  return "electricity";
 }
 
 export function useUserRole(user: User | null): UserRoleInfo {
@@ -57,10 +57,8 @@ export function useUserRole(user: User | null): UserRoleInfo {
       return { role: "commandcenter" };
     }
 
-    // Department user — check map or infer from email alias
+    // Department user — check map or infer from email
     const deptKey = DEPT_EMAIL_MAP[email] ?? inferDeptFromEmail(email);
-    if (deptKey) return { role: "department", department: deptKey };
-
-    return { role: "citizen" };
+    return { role: "department", department: deptKey };
   }, [user]);
 }
