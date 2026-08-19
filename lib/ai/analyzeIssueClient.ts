@@ -345,31 +345,23 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
             }
             parts.push({ text: prompt });
 
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
             const apiRes = await withTimeout(
-              fetch(geminiUrl, {
+              fetch("/api/analyze-proxy", {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-goog-api-key": apiKey,
-                  "Authorization": `Bearer ${apiKey}`,
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  contents: [{ role: "user", parts }],
-                  generationConfig: {
-                    responseMimeType: "application/json",
-                    temperature: 0.1,
-                    maxOutputTokens: 4096,
-                  },
+                  prompt,
+                  imageBase64,
+                  mimeType: imageMimeType,
                 }),
               }),
               GEMINI_TIMEOUT_MS,
-              "Gemini REST API",
+              "Gemini proxy",
             );
 
             if (!apiRes.ok) {
               const errTxt = await apiRes.text().catch(() => "");
-              throw new Error(`Gemini HTTP ${apiRes.status}: ${errTxt.slice(0, 150)}`);
+              throw new Error(`Gemini proxy HTTP ${apiRes.status}: ${errTxt.slice(0, 150)}`);
             }
 
             const resJson = (await apiRes.json()) as {
