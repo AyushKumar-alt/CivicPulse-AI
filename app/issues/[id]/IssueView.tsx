@@ -445,6 +445,7 @@ export default function IssueView({ id }: { id: string }) {
               {issue!.escalation_reason ? ` — ${issue!.escalation_reason}` : ""}
             </span>
           </div>
+        )}
         {(ai.summary?.includes("fallback") || ai.summary?.includes("unavailable")) && (
           <div className="mt-3 mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between gap-3 flex-wrap">
             <div>
