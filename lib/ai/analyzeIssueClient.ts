@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { Timestamp, doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import { reverseGeocode, type GeocodedLocation } from "@/lib/geocode";
@@ -335,28 +334,44 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
 
     // Try client-side Gemini if key is present
     if (apiKey) {
-      const ai = new GoogleGenAI({ apiKey });
       const modelsToTry = [process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
       for (const m of modelsToTry) {
         try {
           aiResult = await callWithRetry(async () => {
-            // Build parts — include inlineData if image is available, otherwise text prompt only
+            // Build parts — include inline_data if image is available, otherwise text prompt only
             const parts: Record<string, unknown>[] = [];
             if (imageBase64) {
-              parts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
+              parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
             }
             parts.push({ text: prompt });
 
-            const response = await withTimeout(
-              ai.models.generateContent({
-                model: m,
-                contents: [{ role: "user", parts }],
-                config: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 },
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+            const apiRes = await withTimeout(
+              fetch(geminiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ role: "user", parts }],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.1,
+                    maxOutputTokens: 4096,
+                  },
+                }),
               }),
               GEMINI_TIMEOUT_MS,
-              "Gemini generateContent",
+              "Gemini REST API",
             );
-            const rawText = (response.text ?? "").trim();
+
+            if (!apiRes.ok) {
+              const errTxt = await apiRes.text().catch(() => "");
+              throw new Error(`Gemini HTTP ${apiRes.status}: ${errTxt.slice(0, 150)}`);
+            }
+
+            const resJson = (await apiRes.json()) as {
+              candidates?: { content?: { parts?: { text?: string }[] } }[];
+            };
+            const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
             return JSON.parse(extractJson(rawText)) as AiResult;
           }, issueId);
           if (aiResult) break;
