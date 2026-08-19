@@ -349,7 +349,11 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
             const apiRes = await withTimeout(
               fetch(geminiUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-goog-api-key": apiKey,
+                  "Authorization": `Bearer ${apiKey}`,
+                },
                 body: JSON.stringify({
                   contents: [{ role: "user", parts }],
                   generationConfig: {

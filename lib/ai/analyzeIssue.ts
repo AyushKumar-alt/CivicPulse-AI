@@ -472,29 +472,45 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
     for (const m of modelsToTry) {
       try {
         aiResult = await callWithRetry(async () => {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
           const response = await withTimeout(
-            ai.models.generateContent({
-              model: m,
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { inlineData: { data: imageBase64, mimeType } },
-                    { text: prompt },
-                  ],
-                },
-              ],
-              config: {
-                responseMimeType: "application/json",
-                temperature: 0.1,
-                maxOutputTokens: 4096,
+            fetch(geminiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey,
+                "Authorization": `Bearer ${apiKey}`,
               },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [
+                      { inline_data: { mime_type: mimeType, data: imageBase64 } },
+                      { text: prompt },
+                    ],
+                  },
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  temperature: 0.1,
+                  maxOutputTokens: 4096,
+                },
+              }),
             }),
             GEMINI_TIMEOUT_MS,
-            "Gemini generateContent",
+            "Gemini REST API",
           );
 
-          const rawText = (response.text ?? "").trim();
+          if (!response.ok) {
+            const errBody = await response.text().catch(() => "");
+            throw new Error(`Gemini HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+          }
+
+          const resJson = (await response.json()) as {
+            candidates?: { content?: { parts?: { text?: string }[] } }[];
+          };
+          const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
           const jsonText = extractJson(rawText);
           return JSON.parse(jsonText) as AiResult;
         }, issueId);
