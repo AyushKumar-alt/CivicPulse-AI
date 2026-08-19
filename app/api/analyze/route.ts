@@ -4,15 +4,15 @@ import { analyzeIssue } from "@/lib/ai/analyzeIssue";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const body = await request.json() as { issueId?: string };
-  const { issueId } = body;
+  const body = await request.json() as { issueId?: string; force?: boolean };
+  const { issueId, force } = body;
 
   if (!issueId || typeof issueId !== "string") {
     return Response.json({ error: "issueId is required" }, { status: 400 });
   }
 
   try {
-    await analyzeIssue(issueId);
+    await analyzeIssue(issueId, !!force);
     return Response.json({ status: "done" });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

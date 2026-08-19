@@ -201,8 +201,24 @@ export default function IssueView({ id }: { id: string }) {
   const [confirmed, setConfirmed] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [reAnalyzing, setReAnalyzing] = useState(false);
   const hasCheckedConfirm = useRef(false);
   const hasTriggeredAnalysis = useRef(false);
+
+  async function handleReAnalyze() {
+    setReAnalyzing(true);
+    try {
+      await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueId: id, force: true }),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReAnalyzing(false);
+    }
+  }
 
   // Comments state
   const [comments, setComments] = useState<CommentRecord[]>([]);
@@ -428,6 +444,21 @@ export default function IssueView({ id }: { id: string }) {
               <span className="font-semibold">Escalated</span>
               {issue!.escalation_reason ? ` — ${issue!.escalation_reason}` : ""}
             </span>
+          </div>
+        {(ai.summary?.includes("fallback") || ai.summary?.includes("unavailable")) && (
+          <div className="mt-3 mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs font-bold text-indigo-900">⚡ Upgrade to Gemini 2.5 Flash Multimodal Report</p>
+              <p className="text-xs text-indigo-700 mt-0.5">Click below to generate full AI priority scoring, severity estimation, and action plan.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleReAnalyze}
+              disabled={reAnalyzing}
+              className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {reAnalyzing ? "Running Gemini 2.5 Flash..." : "✨ Run Gemini 2.5 Flash"}
+            </button>
           </div>
         )}
 

@@ -156,16 +156,26 @@ export default function SubmitPage() {
         contextHint: resolvedHint,
       });
 
-      // Fire-and-forget: runs in browser JS context, survives client-side navigation
-      analyzeIssueClient({
-        issueId,
-        imageBase64: imageBase64 ?? "",
-        imageMimeType,
-        description: description || "",
-        lat: location.lat,
-        lng: location.lng,
-        contextHint: resolvedHint ?? null,
-      }).catch(console.error);
+      // Trigger server-side Gemini 2.5 Flash analysis (/api/analyze)
+      try {
+        await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ issueId }),
+        });
+      } catch (analyzeErr) {
+        console.warn("Server analysis trigger fallback:", analyzeErr);
+        // Fallback to client-side trigger if server fetch fails
+        analyzeIssueClient({
+          issueId,
+          imageBase64: imageBase64 ?? "",
+          imageMimeType,
+          description: description || "",
+          lat: location.lat,
+          lng: location.lng,
+          contextHint: resolvedHint ?? null,
+        }).catch(console.error);
+      }
 
       router.push(`/issues/${issueId}`);
     } catch (err) {

@@ -402,7 +402,7 @@ async function checkDuplicate(
 
 // ── Main analysis function ───────────────────────────────────────────────────
 
-export async function analyzeIssue(issueId: string): Promise<void> {
+export async function analyzeIssue(issueId: string, force = false): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let issueRef: any = null;
 
@@ -416,8 +416,11 @@ export async function analyzeIssue(issueId: string): Promise<void> {
     }
     const data = snap.data()!;
 
-    if (data.status !== "processing") {
-      console.info(`[${issueId}] Status is "${data.status as string}", skipping.`);
+    const currentSummary = (data.ai?.summary as string | undefined) ?? "";
+    const isFallback = currentSummary.includes("deterministic fallback") || currentSummary.includes("unavailable");
+
+    if (data.status !== "processing" && !isFallback && !force) {
+      console.info(`[${issueId}] Status is "${data.status as string}" and not fallback, skipping.`);
       return;
     }
 
