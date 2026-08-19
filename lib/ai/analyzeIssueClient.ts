@@ -334,7 +334,7 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
 
     // Try client-side Gemini if key is present
     if (apiKey) {
-      const modelsToTry = [process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
+      const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
       for (const m of modelsToTry) {
         try {
           aiResult = await callWithRetry(async () => {

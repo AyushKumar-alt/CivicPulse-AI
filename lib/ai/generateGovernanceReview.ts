@@ -346,7 +346,7 @@ function deterministicGovernanceReview(input: GovernanceInput): GovernanceOutput
 
 // ── Gemini path ──────────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
 
 export async function generateGovernanceReview(input: GovernanceInput, _keyOverride?: string): Promise<GovernanceOutput> {
   const apiKey = _keyOverride ?? process.env.GEMINI_API_KEY;
