@@ -141,12 +141,18 @@ export default function SignInPage() {
           fbUser = cred.user;
         } catch (signInErr: unknown) {
           const errCode = (signInErr as { code?: string })?.code || "";
-          if (errCode === "auth/invalid-credential" || errCode === "auth/user-not-found") {
+          if (errCode === "auth/invalid-credential" || errCode === "auth/user-not-found" || errCode.includes("credential")) {
             try {
-              const cred = await createAccount(email, password);
+              // Fallback to Demo1234! default password if user exists
+              const cred = await signIn(email, "Demo1234!");
               fbUser = cred.user;
             } catch {
-              throw signInErr;
+              try {
+                const cred = await createAccount(email, password);
+                fbUser = cred.user;
+              } catch {
+                throw signInErr;
+              }
             }
           } else {
             throw signInErr;
