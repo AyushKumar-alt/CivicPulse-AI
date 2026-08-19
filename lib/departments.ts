@@ -1,5 +1,6 @@
 export type DepartmentKey =
   | "roads"
+  | "water"
   | "cmwssb"
   | "electricity"
   | "sanitation"
@@ -39,10 +40,25 @@ export const DEPARTMENTS: Record<DepartmentKey, DepartmentInfo> = {
     crewTotal: 6,
     avgResponseTime: "4–6 hrs",
   },
+  water: {
+    key: "water",
+    name: "Water Supply & Sewerage Board",
+    shortName: "Water & Sewerage",
+    email: "water@demo.com",
+    icon: "💧",
+    bgClass: "bg-blue-50",
+    borderClass: "border-blue-200",
+    textClass: "text-blue-700",
+    badgeClass: "bg-blue-100 text-blue-800",
+    activeBgClass: "bg-blue-600",
+    crewAvailable: 3,
+    crewTotal: 6,
+    avgResponseTime: "3–5 hrs",
+  },
   cmwssb: {
     key: "cmwssb",
-    name: "Water Supply & Sewerage (CMWSSB)",
-    shortName: "CMWSSB",
+    name: "Water Supply & Sewerage Board",
+    shortName: "Water & Sewerage",
     email: "cmwssb@demo.com",
     icon: "💧",
     bgClass: "bg-blue-50",
@@ -50,13 +66,13 @@ export const DEPARTMENTS: Record<DepartmentKey, DepartmentInfo> = {
     textClass: "text-blue-700",
     badgeClass: "bg-blue-100 text-blue-800",
     activeBgClass: "bg-blue-600",
-    crewAvailable: 2,
-    crewTotal: 5,
+    crewAvailable: 3,
+    crewTotal: 6,
     avgResponseTime: "3–5 hrs",
   },
   electricity: {
     key: "electricity",
-    name: "Electricity Distribution",
+    name: "Electricity & Power Distribution",
     shortName: "Electricity",
     email: "electricity@demo.com",
     icon: "⚡",
@@ -116,22 +132,27 @@ export const DEPARTMENTS: Record<DepartmentKey, DepartmentInfo> = {
   },
 };
 
-export const DEPARTMENT_LIST: DepartmentInfo[] = Object.values(DEPARTMENTS);
+// Distinct list of canonical functional departments (excludes duplicate cmwssb key alias for UI lists)
+export const DEPARTMENT_LIST: DepartmentInfo[] = [
+  DEPARTMENTS.roads,
+  DEPARTMENTS.water,
+  DEPARTMENTS.electricity,
+  DEPARTMENTS.sanitation,
+  DEPARTMENTS.traffic,
+  DEPARTMENTS.publicworks,
+];
 
-// Deterministic routing: maps responsible_authority → department key
-// Order matters — more specific patterns first
+// Deterministic routing: maps responsible_authority / issue_type → universal department key
 const ROUTING_RULES: Array<[RegExp, DepartmentKey]> = [
   [/traffic|signal|junction|intersection/i, "traffic"],
-  [/electric|streetlight|street\s*light|lighting|power|tneb|lamp post/i, "electricity"],
-  [/water|sewerage|sewage|drainage|pipeline|leakage|waterlogging|flooding|cmwssb|storm drain/i, "cmwssb"],
-  [/sanit|garbage|waste|rubbish|trash|solid waste|dump|litter|sweeping/i, "sanitation"],
-  [/road|highway|pothole|footpath|pavement|sidewalk|bitumen|tar road|asphalt|nhai|transport/i, "roads"],
-  [/public works|infrastructure|building|structural|civic maintenance/i, "publicworks"],
+  [/electric|streetlight|street\s*light|lighting|power|tneb|bescom|tesspdcl|msedcl|tata power|adani|lamp post/i, "electricity"],
+  [/water|sewerage|sewage|drainage|pipeline|leakage|waterlogging|flooding|cmwssb|bwssb|djb|hmwssb|jal board|storm drain/i, "water"],
+  [/sanit|garbage|waste|rubbish|trash|solid waste|dump|litter|sweeping|bbmp solid waste|mcd/i, "sanitation"],
+  [/road|highway|pothole|footpath|pavement|sidewalk|bitumen|tar road|asphalt|nhai|transport|bbmp/i, "roads"],
+  [/public works|infrastructure|building|structural|civic maintenance|pwd/i, "publicworks"],
 ];
 
 export function mapToDepartment(responsibleAuthority: string, issueType?: string): DepartmentInfo {
-  // Combine both signals so issue_type acts as a tiebreaker when responsible_authority
-  // is too generic (e.g. "Public Works Department" for a pothole)
   const combined = [responsibleAuthority, issueType].filter(Boolean).join(" ");
   for (const [pattern, key] of ROUTING_RULES) {
     if (pattern.test(combined)) return DEPARTMENTS[key];
@@ -140,6 +161,7 @@ export function mapToDepartment(responsibleAuthority: string, issueType?: string
 }
 
 export function getDepartmentByKey(key: string): DepartmentInfo | null {
+  if (key === "cmwssb") return DEPARTMENTS.water;
   return DEPARTMENTS[key as DepartmentKey] ?? null;
 }
 

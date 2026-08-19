@@ -13,6 +13,7 @@ import { useUserRole } from "@/lib/hooks/useUserRole";
 import { logout } from "@/lib/firebase/auth";
 import { DEPARTMENT_LIST, getDepartmentByKey } from "@/lib/departments";
 import type { DepartmentKey } from "@/lib/departments";
+import { getRegionalAgencyLabel, CITIES_LIST } from "@/lib/municipal-authorities";
 import { getGreeting } from "@/lib/time/getGreeting";
 import type { GovernanceDecision, GovernanceReport, ReworkOrder, AccountabilityReport } from "@/lib/ai/generateGovernanceReview";
 import { generateGovernanceReviewClient } from "@/lib/ai/generateGovernanceReviewClient";
@@ -1131,9 +1132,9 @@ function IssueCard({
           ) : null}
         </p>
 
-        {issue.ai?.responsible_authority && (
-          <p className="text-xs text-gray-400 mb-2 truncate">{issue.ai.responsible_authority}</p>
-        )}
+        <p className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 mb-2 inline-block font-semibold truncate max-w-full">
+          🏢 {getRegionalAgencyLabel(issue.assigned_department ?? "publicworks", addressText, issue.ai?.responsible_authority)}
+        </p>
 
         {issue.escalated && issue.escalation_reason && (
           <p className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1 mb-2">
@@ -1208,6 +1209,7 @@ export default function AuthorityPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [deptFilter, setDeptFilter] = useState<DepartmentKey | null>(null);
+  const [cityFilter, setCityFilter] = useState<string>("All Municipalities");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -1493,23 +1495,53 @@ export default function AuthorityPage() {
   const filtered = issues.filter((issue) => {
     if (filter === "escalated" && !issue.escalated) return false;
     if (filter !== "all" && filter !== "escalated" && issue.status !== filter) return false;
-    if (deptFilter && issue.assigned_department !== deptFilter) return false;
+    if (deptFilter) {
+      if (deptFilter === "water" || deptFilter === "cmwssb") {
+        if (!["water", "cmwssb"].includes(issue.assigned_department ?? "")) return false;
+      } else if (issue.assigned_department !== deptFilter) {
+        return false;
+      }
+    }
+    if (cityFilter !== "All Municipalities") {
+      const addr = (issue.location?.address ?? "").toLowerCase();
+      const authText = (issue.ai?.responsible_authority ?? "").toLowerCase();
+      const cityKey = cityFilter.toLowerCase();
+      if (!addr.includes(cityKey) && !authText.includes(cityKey)) {
+        return false;
+      }
+    }
     return true;
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <span className="font-semibold text-gray-900">🏛️ Municipal Command Center</span>
           {!loading && (
-            <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-              {issues.length} issues
+            <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-medium">
+              {filtered.length} / {issues.length} issues
             </span>
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* City / Municipality Filter Selector */}
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+            <span className="text-xs font-semibold text-gray-500">Municipality:</span>
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="text-xs bg-transparent text-gray-900 font-semibold focus:outline-none cursor-pointer"
+            >
+              {CITIES_LIST.map((city) => (
+                <option key={city} value={city}>
+                  {city === "All Municipalities" ? "🌐 All Municipalities" : `📍 ${city}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="button"
             onClick={() => setShowAnalytics((v) => !v)}

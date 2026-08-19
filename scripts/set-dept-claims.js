@@ -25,7 +25,8 @@ initializeApp({ credential: cert(serviceAccount) });
 // so departments can only update their own assigned issues.
 const DEPARTMENT_ACCOUNTS = [
   { email: "roads@demo.com",       dept: "roads"       },
-  { email: "cmwssb@demo.com",      dept: "cmwssb"      },
+  { email: "water@demo.com",       dept: "water"       },
+  { email: "cmwssb@demo.com",      dept: "water"       },
   { email: "electricity@demo.com", dept: "electricity" },
   { email: "sanitation@demo.com",  dept: "sanitation"  },
   { email: "traffic@demo.com",     dept: "traffic"     },

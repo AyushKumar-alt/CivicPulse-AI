@@ -17,6 +17,7 @@ import {
   STAGE_TRANSITIONS,
 } from "@/lib/departments";
 import type { DepartmentInfo } from "@/lib/departments";
+import { getRegionalAgencyLabel } from "@/lib/municipal-authorities";
 import {
   collection, getDocs, doc, updateDoc, query,
   where, orderBy, limit, arrayUnion, Timestamp,
@@ -281,6 +282,9 @@ function IssueListCard({
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusColor}`}>
             {deptStatusLabel}
+          </span>
+          <span className="text-xs bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded font-semibold">
+            {getRegionalAgencyLabel(dept.key, issue.location?.address ?? "", issue.ai?.responsible_authority)}
           </span>
           {issue.area_category && (
             <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.5 rounded font-medium">
@@ -1242,9 +1246,10 @@ export default function DepartmentPage() {
     setLoading(true);
     setError("");
     try {
+      const targetDepts = (dept.key === "water" || dept.key === "cmwssb") ? ["water", "cmwssb"] : [dept.key];
       const q = query(
         collection(db, "issues"),
-        where("assigned_department", "==", dept.key),
+        where("assigned_department", "in", targetDepts),
       );
       const snap = await getDocs(q);
       function tsToMs(ts: unknown): number | null {

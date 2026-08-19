@@ -420,3 +420,51 @@ export function getRegionalAuthorities(city: string, state: string): RegionalAut
     cityLabel: cityMatch?.cityLabel ?? (city || state || "your area"),
   };
 }
+
+/**
+ * Returns human-friendly regional agency label for a given functional department key and city.
+ * E.g., ('water', 'Bengaluru') -> 'BWSSB (Water Supply & Sewerage)'
+ * E.g., ('water', 'Chennai') -> 'CMWSSB (Water Supply & Sewerage)'
+ * E.g., ('electricity', 'Bengaluru') -> 'BESCOM (Electricity Distribution)'
+ */
+export function getRegionalAgencyLabel(deptKey: string, city?: string, fallbackText?: string): string {
+  if (fallbackText && fallbackText.trim().length > 0 && !fallbackText.includes("Municipal")) {
+    return fallbackText;
+  }
+
+  const cleanCity = city ? city.split(",")[0].trim() : "";
+  const auth = getRegionalAuthorities(cleanCity, cleanCity);
+  const key = deptKey === "cmwssb" ? "water" : deptKey;
+
+  switch (key) {
+    case "water":
+      return auth.water;
+    case "electricity":
+      return auth.electricity;
+    case "roads":
+      return auth.roads;
+    case "sanitation":
+      return auth.sanitation;
+    case "traffic":
+      return auth.traffic;
+    case "publicworks":
+      return auth.publicworks;
+    default:
+      return fallbackText || "Public Works Department";
+  }
+}
+
+export const CITIES_LIST = [
+  "All Municipalities",
+  "Bengaluru",
+  "Chennai",
+  "Mumbai",
+  "Delhi",
+  "Hyderabad",
+  "Pune",
+  "Coimbatore",
+  "Madurai",
+  "Kolkata",
+  "Ahmedabad",
+];
+
