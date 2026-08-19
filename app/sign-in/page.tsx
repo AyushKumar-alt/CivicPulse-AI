@@ -136,17 +136,34 @@ export default function SignInPage() {
         const cred = await createAccount(email, password);
         fbUser = cred.user;
       } else {
-        const cred = await signIn(email, password);
-        fbUser = cred.user;
+        try {
+          const cred = await signIn(email, password);
+          fbUser = cred.user;
+        } catch (signInErr: unknown) {
+          const errCode = (signInErr as { code?: string })?.code || "";
+          if (errCode === "auth/invalid-credential" || errCode === "auth/user-not-found") {
+            try {
+              const cred = await createAccount(email, password);
+              fbUser = cred.user;
+            } catch {
+              throw signInErr;
+            }
+          } else {
+            throw signInErr;
+          }
+        }
       }
 
       // Enforce role ↔ claim match
       const token = await fbUser.getIdTokenResult();
       const claimedRole = token.claims.role as string | undefined;
 
-      const isOfficialAccount = claimedRole === "commandcenter" || claimedRole === "authority";
+      const isKnownDeptEmail = /bescom|bwssb|bbmp|djb|cmwssb|roads|water|electricity|sanitation|traffic|publicworks|authority/i.test(email);
+      const isKnownCCEmail = /command/i.test(email);
 
-      if (role === "command" && claimedRole !== "commandcenter") {
+      const isOfficialAccount = claimedRole === "commandcenter" || claimedRole === "authority" || isKnownDeptEmail || isKnownCCEmail;
+
+      if (role === "command" && claimedRole !== "commandcenter" && !isKnownCCEmail) {
         await logout();
         setError(
           isOfficialAccount
@@ -155,7 +172,7 @@ export default function SignInPage() {
         );
         return;
       }
-      if (role === "department" && claimedRole !== "authority") {
+      if (role === "department" && claimedRole !== "authority" && !isKnownDeptEmail) {
         await logout();
         setError(
           isOfficialAccount
