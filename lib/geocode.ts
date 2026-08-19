@@ -1,3 +1,5 @@
+import { resolveCityFromLocation } from "@/lib/municipal-authorities";
+
 interface NominatimAddress {
   road?: string;
   neighbourhood?: string;
@@ -54,17 +56,24 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Geocoded
 
     const street = a.road ?? "";
     const area = a.neighbourhood ?? a.suburb ?? a.city_district ?? "";
-    const city = a.city ?? a.town ?? a.village ?? "";
+    const rawCity = a.city ?? a.town ?? a.village ?? "";
     const state = a.state ?? "";
 
-    const formatted =
-      [street, area, city].filter(Boolean).join(", ") ||
+    const detectedCity = resolveCityFromLocation(data.display_name, lat, lng) || rawCity;
+    const finalCity = detectedCity || rawCity;
+
+    let formatted =
+      [street, area, rawCity].filter(Boolean).join(", ") ||
       data.display_name.split(",").slice(0, 3).join(",").trim();
+
+    if (detectedCity && !formatted.toLowerCase().includes(detectedCity.toLowerCase())) {
+      formatted = `${formatted}, ${detectedCity}`;
+    }
 
     return {
       address: formatted,
-      area_name: area || city,
-      city,
+      area_name: area || finalCity,
+      city: finalCity,
       state,
       zone_type: detectZoneType(data.display_name),
     };

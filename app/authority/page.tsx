@@ -13,7 +13,7 @@ import { useUserRole } from "@/lib/hooks/useUserRole";
 import { logout } from "@/lib/firebase/auth";
 import { DEPARTMENT_LIST, getDepartmentByKey } from "@/lib/departments";
 import type { DepartmentKey } from "@/lib/departments";
-import { getRegionalAgencyLabel, CITIES_LIST } from "@/lib/municipal-authorities";
+import { getRegionalAgencyLabel, CITIES_LIST, resolveCityFromLocation } from "@/lib/municipal-authorities";
 import { getGreeting } from "@/lib/time/getGreeting";
 import type { GovernanceDecision, GovernanceReport, ReworkOrder, AccountabilityReport } from "@/lib/ai/generateGovernanceReview";
 import { generateGovernanceReviewClient } from "@/lib/ai/generateGovernanceReviewClient";
@@ -1503,11 +1503,17 @@ export default function AuthorityPage() {
       }
     }
     if (cityFilter !== "All Municipalities") {
-      const addr = (issue.location?.address ?? "").toLowerCase();
-      const authText = (issue.ai?.responsible_authority ?? "").toLowerCase();
-      const cityKey = cityFilter.toLowerCase();
-      if (!addr.includes(cityKey) && !authText.includes(cityKey)) {
-        return false;
+      const fullText = `${issue.location?.address ?? ""} ${issue.ai?.responsible_authority ?? ""}`;
+      const resolved = resolveCityFromLocation(fullText, issue.location?.lat, issue.location?.lng);
+      if (resolved) {
+        if (resolved.toLowerCase() !== cityFilter.toLowerCase()) return false;
+      } else {
+        const addr = (issue.location?.address ?? "").toLowerCase();
+        const authText = (issue.ai?.responsible_authority ?? "").toLowerCase();
+        const cityKey = cityFilter.toLowerCase();
+        if (!addr.includes(cityKey) && !authText.includes(cityKey)) {
+          return false;
+        }
       }
     }
     return true;

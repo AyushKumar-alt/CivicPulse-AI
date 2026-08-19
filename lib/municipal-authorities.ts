@@ -421,19 +421,78 @@ export function getRegionalAuthorities(city: string, state: string): RegionalAut
   };
 }
 
-/**
- * Returns human-friendly regional agency label for a given functional department key and city.
- * E.g., ('water', 'Bengaluru') -> 'BWSSB (Water Supply & Sewerage)'
- * E.g., ('water', 'Chennai') -> 'CMWSSB (Water Supply & Sewerage)'
- * E.g., ('electricity', 'Bengaluru') -> 'BESCOM (Electricity Distribution)'
- */
-export function getRegionalAgencyLabel(deptKey: string, city?: string, fallbackText?: string): string {
-  if (fallbackText && fallbackText.trim().length > 0 && !fallbackText.includes("Municipal")) {
-    return fallbackText;
+// Bounding boxes for major Indian metropolitan areas
+const METRO_BOUNDING_BOXES: Array<{ city: string; minLat: number; maxLat: number; minLng: number; maxLng: number }> = [
+  { city: "Bengaluru", minLat: 12.70, maxLat: 13.30, minLng: 77.40, maxLng: 77.90 },
+  { city: "Chennai", minLat: 12.75, maxLat: 13.30, minLng: 80.00, maxLng: 80.38 },
+  { city: "Mumbai", minLat: 18.80, maxLat: 19.40, minLng: 72.70, maxLng: 73.20 },
+  { city: "Delhi", minLat: 28.30, maxLat: 28.95, minLng: 76.80, maxLng: 77.55 },
+  { city: "Hyderabad", minLat: 17.15, maxLat: 17.65, minLng: 78.15, maxLng: 78.70 },
+  { city: "Pune", minLat: 18.30, maxLat: 18.75, minLng: 73.60, maxLng: 74.15 },
+  { city: "Kolkata", minLat: 22.35, maxLat: 22.80, minLng: 88.20, maxLng: 88.55 },
+  { city: "Ahmedabad", minLat: 22.90, maxLat: 23.20, minLng: 72.45, maxLng: 72.75 },
+];
+
+// Suburb & landmark keywords mapping to major cities
+const SUBURB_CITY_MAP: Record<string, string[]> = {
+  Bengaluru: [
+    "bengaluru", "bangalore", "hunasamaranahalli", "kodagalahatti", "yelahanka", "whitefield",
+    "koramangala", "indiranagar", "electronic city", "hebbal", "marathahalli", "sarjapur",
+    "bellandur", "devanahalli", "yeshwanthpur", "jayanagar", "rajajinagar", "hsr layout",
+    "malleswaram", "banashankari", "kengeri", "kalyan nagar", "nagavara", "hoodi", "varthur"
+  ],
+  Chennai: [
+    "chennai", "madras", "tambaram", "velachery", "adyar", "tnagar", "t. nagar", "guindy",
+    "chromepet", "ambattur", "avadi", "porur", "sholinganallur", "omr", "perungudi", "anna nagar",
+    "mylapore", "triplicane", "egmore", "royapettah", "kodambakkam", "perambur", "koyambedu"
+  ],
+  Mumbai: [
+    "mumbai", "bombay", "andheri", "bandra", "borivali", "thane", "navi mumbai", "dadar",
+    "juhu", "powai", "kurla", "malad", "chembur", "ghatkopar", "worli", "colaba", "vashi"
+  ],
+  Delhi: [
+    "delhi", "new delhi", "gurugram", "gurgaon", "noida", "ghaziabad", "faridabad", "dwarka",
+    "saket", "rohini", "janakpuri", "lajpat nagar", "connaught place", "karol bagh", "vasant kunj"
+  ],
+  Hyderabad: [
+    "hyderabad", "secunderabad", "hitech city", "gachibowli", "madhapur", "kukatpally",
+    "jubilee hills", "banjara hills", "begumpet", "ameerpet", "charminar", "kondapur"
+  ],
+  Pune: [
+    "pune", "poona", "hinjawadi", "hinjewadi", "wakad", "baner", "viman nagar", "kothrud",
+    "hadapsar", "pimpri", "chinchwad", "kharadi", "aundh", "magarpatta"
+  ]
+};
+
+export function resolveCityFromLocation(text?: string, lat?: number, lng?: number): string | null {
+  // 1. Lat/Lng Bounding Box check (most accurate)
+  if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+    for (const box of METRO_BOUNDING_BOXES) {
+      if (lat >= box.minLat && lat <= box.maxLat && lng >= box.minLng && lng <= box.maxLng) {
+        return box.city;
+      }
+    }
   }
 
-  const cleanCity = city ? city.split(",")[0].trim() : "";
-  const auth = getRegionalAuthorities(cleanCity, cleanCity);
+  // 2. Keyword/Suburb text check
+  if (text) {
+    const lower = text.toLowerCase();
+    for (const [city, keywords] of Object.entries(SUBURB_CITY_MAP)) {
+      if (keywords.some((k) => lower.includes(k))) {
+        return city;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns human-friendly regional agency label for a given functional department key and location.
+ */
+export function getRegionalAgencyLabel(deptKey: string, cityOrAddress?: string, fallbackText?: string, lat?: number, lng?: number): string {
+  const resolvedCity = resolveCityFromLocation(cityOrAddress, lat, lng) || (cityOrAddress ? cityOrAddress.split(",")[0].trim() : "");
+  const auth = getRegionalAuthorities(resolvedCity, resolvedCity);
   const key = deptKey === "cmwssb" ? "water" : deptKey;
 
   switch (key) {
