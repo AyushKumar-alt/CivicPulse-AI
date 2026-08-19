@@ -1,6 +1,6 @@
 {
-  "name": "Community Hero AI",
-  "short_name": "Community Hero",
+  "name": "CivicPulse AI",
+  "short_name": "CivicPulse",
   "description": "AI-powered civic operations platform — report, verify, and resolve community issues.",
   "start_url": "/",
   "display": "standalone",

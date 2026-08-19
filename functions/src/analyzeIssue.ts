@@ -26,7 +26,7 @@ function mimeTypeFromUrl(url: string): string {
 }
 
 function buildPrompt(description: string, lat: number, lng: number): string {
-  return `You are an AI assistant for Community Hero, a civic issue reporting platform.
+  return `You are an AI assistant for CivicPulse AI, a civic issue reporting platform.
 
 Analyze the provided image and classify the civic issue shown.
 

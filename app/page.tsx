@@ -5,7 +5,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Nav */}
       <nav className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <span className="font-semibold text-gray-900">Community Hero AI</span>
+        <span className="font-semibold text-gray-900">CivicPulse AI</span>
         <div className="flex items-center gap-3">
           <Link
             href="/sign-in"
@@ -121,7 +121,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-100 px-6 py-4 text-center text-xs text-gray-400">
-        Community Hero AI · Powered by Google Gemini + Firebase
+        CivicPulse AI · Powered by Google Gemini + Firebase
       </footer>
     </div>
   );

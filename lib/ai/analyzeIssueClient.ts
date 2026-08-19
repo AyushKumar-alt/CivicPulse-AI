@@ -122,7 +122,7 @@ function buildPrompt(
     authorities.publicworks,
   ].join(" | ");
 
-  return `You are a civic issue analysis agent for Community Hero AI, a municipal operations platform serving ${authorities.cityLabel}.
+  return `You are a civic issue analysis agent for CivicPulse AI, a municipal operations platform serving ${authorities.cityLabel}.
 
 A citizen has submitted a photo of a community infrastructure problem.
 

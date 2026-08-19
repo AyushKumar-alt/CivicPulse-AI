@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Community Hero AI",
+  title: "CivicPulse AI",
   description: "AI-powered civic operations platform — report, verify, and resolve community issues.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Community Hero AI",
+    title: "CivicPulse AI",
   },
 };
 

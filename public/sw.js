@@ -1,4 +1,4 @@
-const CACHE_NAME = "community-hero-v1";
+const CACHE_NAME = "civicpulse-v1";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",

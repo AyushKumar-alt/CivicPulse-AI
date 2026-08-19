@@ -1,6 +1,6 @@
 {
-  "name": "community-hero-functions",
-  "description": "Community Hero AI - Firebase Cloud Functions",
+  "name": "civicpulse-functions",
+  "description": "CivicPulse AI - Firebase Cloud Functions",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",

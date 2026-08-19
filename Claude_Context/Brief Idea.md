@@ -1,4 +1,4 @@
-# Community Hero AI
+# CivicPulse AI
 
 ## Product Brief v1
 
@@ -66,7 +66,7 @@ Traditional civic platforms:
 
 Citizen → Report Issue → Authority Reviews
 
-Community Hero AI:
+CivicPulse AI:
 
 Citizen → AI Understands → AI Verifies → AI Prioritizes → AI Plans Resolution → Authority Acts
 

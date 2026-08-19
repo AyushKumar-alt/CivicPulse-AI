@@ -130,7 +130,7 @@ function buildPrompt(
 NOTE: This is optional user-provided context. The address and detected landmark above are stronger signals. Use this hint to resolve ambiguity, not to override clear landmark evidence.`
     : `\nNo additional context hint was provided by the citizen.`;
 
-  return `You are a civic issue analysis agent for Community Hero AI, a municipal operations platform.
+  return `You are a civic issue analysis agent for CivicPulse AI, a municipal operations platform.
 
 A citizen has submitted a photo of a community infrastructure problem.
 

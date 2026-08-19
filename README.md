@@ -1,11 +1,11 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=220&section=header&text=Community%20Hero%20AI&fontSize=60&fontColor=fff&animation=twinkling&fontAlignY=38&desc=AI-Powered%20Civic%20Operations%20Platform&descAlignY=58&descSize=22&descColor=cce4ff" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=220&section=header&text=CivicPulse%20AI&fontSize=60&fontColor=fff&animation=twinkling&fontAlignY=38&desc=AI-Powered%20Civic%20Operations%20Platform&descAlignY=58&descSize=22&descColor=cce4ff" width="100%" />
 
 <br/>
 
 <a href="https://community-hero-ai-kappa.vercel.app/">
-  <img src="https://img.shields.io/badge/🌐%20Live%20Demo-community--hero--ai-0070f3?style=for-the-badge&logoColor=white" alt="Live Demo" />
+  <img src="https://img.shields.io/badge/🌐%20Live%20Demo-civicpulse--ai-0070f3?style=for-the-badge&logoColor=white" alt="Live Demo" />
 </a>
 &nbsp;&nbsp;
 <a href="https://drive.google.com/file/d/1rTabPAVObFWzZm50RvZgDcDDuMChgTty/view?usp=sharing"> 
@@ -38,9 +38,9 @@
 
 ---
 
-##  What is Community Hero AI?
+##  What is CivicPulse AI?
 
-Community Hero AI is a full-stack, AI-powered civic infrastructure management platform that transforms how citizens report local issues — potholes, water leaks, electrical failures, sanitation problems — and how municipal departments resolve them.
+CivicPulse AI is a full-stack, AI-powered civic infrastructure management platform that transforms how citizens report local issues — potholes, water leaks, electrical failures, sanitation problems — and how municipal departments resolve them.
 
 It replaces fragmented hotlines and unstructured social media complaints with an end-to-end intelligent workflow: from the moment a citizen photographs an issue, to the moment a Command Centre officer signs off on the completed repair — with full AI reasoning, photographic verification, and governance accountability at every step.
 

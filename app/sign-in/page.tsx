@@ -225,7 +225,7 @@ export default function SignInPage() {
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-              ← Community Hero AI
+              ← CivicPulse AI
             </Link>
           </div>
 
@@ -282,7 +282,7 @@ export default function SignInPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-            ← Community Hero AI
+            ← CivicPulse AI
           </Link>
         </div>
 

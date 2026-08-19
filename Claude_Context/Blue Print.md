@@ -17,7 +17,7 @@ An AI-powered civic operations platform that transforms citizen photo submission
 What makes it different from 95 other teams:  
 Most teams build a reporting form with a Gemini label on it. This platform demonstrates genuine AI agency: the system classifies, contextualizes, prioritizes, assigns, and escalates — without any human intervention. The AI's reasoning is visible in the UI. The platform acts overnight. Citizens can validate each other's reports. Judges see an operating system, not a form.  
 The one-sentence pitch:  
-"Community Hero AI doesn't collect civic reports. It operates them."  
+"CivicPulse AI doesn't collect civic reports. It operates them."  
 Evaluation positioning:
 
 | Criterion | Weight | Strategy |
@@ -724,7 +724,7 @@ Route protection: All routes except / and /auth/signin require authentication. r
 ### Page 1: / — Landing Page
 
 ┌─────────────────────────────────────────────────────────────────────┐  
-│ Community Hero AI                              \[Sign In\]  \[Report →\] │  
+│ CivicPulse AI                              \[Sign In\]  \[Report →\] │  
 ├─────────────────────────────────────────────────────────────────────┤  
 │                                                                     │  
 │   HERO                                                              │  
@@ -763,7 +763,7 @@ Route protection: All routes except / and /auth/signin require authentication. r
 │   \[  Get Started — Report an Issue  \]                               │  
 │                                                                     │  
 ├─────────────────────────────────────────────────────────────────────┤  
-│  Community Hero AI  ·  Powered by Google Gemini \+ Firebase          │  
+│  CivicPulse AI  ·  Powered by Google Gemini \+ Firebase          │  
 └─────────────────────────────────────────────────────────────────────┘
 
 Implementation note: This page is static HTML \+ Tailwind. Zero Firestore reads. Zero auth. Renders instantly. The "See Live Dashboard" button goes to /auth/signin if not logged in.  
@@ -1204,7 +1204,7 @@ MINUTE 3 — AUTHORITY DASHBOARD \+ ESCALATION (2:00–3:00)
 
 CLOSE
 
-"Community Hero AI doesn't collect reports. It operates them."
+"CivicPulse AI doesn't collect reports. It operates them."
 
 ---
 
@@ -1710,12 +1710,12 @@ The user has asked for:
 Let me write the full document now. I'll save user memory in parallel.  
 I'm thinking through which Gemini models to recommend for the implementation. Gemini 2.5 Flash looks ideal for the main analysis work—it's multimodal, supports structured output and grounding, and runs fast enough for a hackathon demo. For background tasks like escalation prose and client-side briefing, Gemini 2.0 Flash would work well. I could also consider 2.5 Pro for the main call if we want maximum capability, but Flash should be sufficient and more cost-effective.  
 Now I'm planning to write out the complete document with a consistency review, updated model reference table, phase-based execution roadmap, and the final hackathon submission document.  
-Write c:\\Users\\calpo\\OneDrive\\Desktop\\Community Hero AI\\memory\\user\_profile.md13 lines  
-Write c:\\Users\\calpo\\OneDrive\\Desktop\\Community Hero AI\\memory\\MEMORY.md4 lines  
+Write c:\\Users\\calpo\\OneDrive\\Desktop\\CivicPulse AI\\memory\\user\_profile.md13 lines  
+Write c:\\Users\\calpo\\OneDrive\\Desktop\\CivicPulse AI\\memory\\MEMORY.md4 lines  
 Now writing the complete final document.  
 ---
 
-# Community Hero AI — Master Design Document v3.0
+# CivicPulse AI — Master Design Document v3.0
 
 ---
 
@@ -2399,11 +2399,59 @@ Category filter: Applied client-side on the 20 fetched documents. No additional 
 
 ---
 
-## Demo Flow (3 minutes)
+## CivicPulse AI — Built for the CivicPulse: Hyperlocal Problem Solver Hackathon  
 
-Hardware setup:
+---
 
-* Two browser windows: Citizen (left), Authority (right), both pre-authenticated  
+## 9\. Appendix — File Tree Reference
+
+```
+civicpulse-ai/  
+├── app/  
+│   ├── layout.tsx  
+│   ├── page.tsx  
+│   ├── globals.css  
+│   ├── auth/  
+│   │   ├── signin/page.tsx  
+│   │   └── callback/route.ts  
+│   ├── report/page.tsx  
+│   ├── dashboard/page.tsx  
+│   ├── authority/page.tsx  
+│   ├── issues/  
+│   │   ├── page.tsx  
+│   │   └── [id]/page.tsx  
+│   └── api/  
+│       ├── analyze/route.ts  
+│       ├── issues/route.ts  
+│       ├── issues/[id]/route.ts  
+│       ├── issues/[id]/confirm/route.ts  
+│       └── briefing/route.ts  
+├── lib/  
+│   ├── gemini.ts  
+│   ├── firebase.ts  
+│   ├── geocode.ts  
+│   └── types.ts  
+├── components/  
+│   ├── Navbar.tsx  
+│   ├── IssueCard.tsx  
+│   ├── IssueMap.tsx  
+│   ├── DecisionTrace.tsx  
+│   ├── AuthorityBriefing.tsx  
+│   ├── PriorityBadge.tsx  
+│   └── ConfirmationButton.tsx  
+├── functions/  
+│   ├── index.js  
+│   ├── analyzeIssue.js  
+│   └── escalateStaleIssues.js  
+├── public/  
+│   └── manifest.json  
+├── package.json  
+└── tailwind.config.js  
+```
+
+---
+
+# CivicPulse AI — Implementation Blueprint pre-authenticated  
 * Demo pothole photo saved locally (do not rely on camera)  
 * Seed data in clean state (run reset script before demo)  
 * Live Firebase Hosting URL open — not localhost
@@ -2446,7 +2494,7 @@ Switch back to Citizen window. Navigate to Community Issues tab. Click Confirm o
 ---
 
 Closing line:  
-"Community Hero AI doesn't collect civic reports. It operates them."  
+"CivicPulse AI doesn't collect civic reports. It operates them."  
 ---
 
 ---
@@ -2458,9 +2506,9 @@ Closing line:
 The following document is formatted for direct submission in a Google Doc. Copy from here forward.  
 ---
 
-# Community Hero AI
+# CivicPulse AI
 
-## Hackathon Submission — Community Hero: Hyperlocal Problem Solver
+## Hackathon Submission — CivicPulse: Hyperlocal Problem Solver
 
 ---
 
@@ -2483,11 +2531,11 @@ The result is a broken civic loop. Citizens give up. Authorities are overwhelmed
 
 ## 2\. Solution Overview
 
-Community Hero AI is an AI-powered civic operations platform that transforms citizen photo submissions into structured, prioritized, department-assigned action items — autonomously, within seconds of submission.  
+CivicPulse AI is an AI-powered civic operations platform that transforms citizen photo submissions into structured, prioritized, department-assigned action items — autonomously, within seconds of submission.  
 The platform does not merely collect reports. It operates them.  
 Traditional workflow:  
 Citizen → Report Issue → Authority Reviews → Manual Triage → Eventual Action  
-Community Hero AI workflow:  
+CivicPulse AI workflow:  
 Citizen → AI Understands → AI Validates → AI Prioritizes → AI Assesses Impact → AI Assigns Responsibility → AI Recommends Action → AI Escalates When Stale → Authority Acts  
 The AI participates at every stage of the issue lifecycle. Authorities receive a prioritized, reasoned, department-ready action queue instead of an inbox of unstructured reports. Citizens see transparent AI reasoning, not a black box. The community can collectively validate issues, strengthening the AI's confidence and priority signals.  
 ---
@@ -2532,7 +2580,7 @@ When a duty officer opens the authority dashboard, Gemini generates a real-time 
 ### Citizen Journey
 
 Report  
-A citizen opens Community Hero AI, taps Report an Issue, and uploads a photo of a civic problem. They drop a pin on the map (or use their current location) and optionally add a short description. They submit.  
+A citizen opens CivicPulse AI, taps Report an Issue, and uploads a photo of a civic problem. They drop a pin on the map (or use their current location) and optionally add a short description. They submit.  
 AI Processing  
 The system immediately begins processing. A progress indicator shows the AI is analyzing the report. Within 4–8 seconds, the full analysis appears: issue type, severity, priority score, impact assessment, department assignment, recommended action, and the AI's complete decision trace.  
 Track  
@@ -2555,7 +2603,7 @@ The officer updates the issue status directly from the dashboard. Status changes
 
 ## 5\. Agent Architecture
 
-Community Hero AI uses a single Gemini orchestrator rather than a chain of sequential agents. This design choice is deliberate: it produces faster, more reliable, and more coherent analysis than a multi-step pipeline where errors compound.
+CivicPulse AI uses a single Gemini orchestrator rather than a chain of sequential agents. This design choice is deliberate: it produces faster, more reliable, and more coherent analysis than a multi-step pipeline where errors compound.
 
 ### The Gemini Orchestrator
 
@@ -2706,7 +2754,7 @@ The platform demonstrates deep, functional integration of Google technologies ra
 ## 10\. Innovation Highlights
 
 Transparent AI reasoning as a product feature  
-Most AI-powered civic tools use AI as a black box — a classification label appears with no explanation. Community Hero AI inverts this. The AI Decision Trace is a first-class UI element. Citizens and authorities can read exactly why the AI made each decision, building trust and demonstrating genuine intelligence rather than pattern matching.  
+Most AI-powered civic tools use AI as a black box — a classification label appears with no explanation. CivicPulse AI inverts this. The AI Decision Trace is a first-class UI element. Citizens and authorities can read exactly why the AI made each decision, building trust and demonstrating genuine intelligence rather than pattern matching.  
 Zone-aware context injection  
 The system pre-fetches geographic context before calling Gemini. A pothole outside a school triggers different AI reasoning than the same pothole in an industrial zone — not because of a hardcoded rule, but because the zone context changes Gemini's analysis. This produces more accurate, contextually appropriate assessments than any static rule system.  
 Autonomous overnight escalation  
@@ -2769,14 +2817,14 @@ Community reputation and impact tracking
 Citizens who consistently submit accurate, high-confidence reports and confirm legitimate issues could develop a credibility score that weights their future reports more heavily in the priority calculation — creating a civic contribution incentive without gamification.  
 ---
 
-Community Hero AI — Built for the Community Hero: Hyperlocal Problem Solver Hackathon  
+CivicPulse AI — Built for the CivicPulse: Hyperlocal Problem Solver Hackathon  
 Stack: Gemini 2.5 Flash · Gemini 2.0 Flash · Firebase · Google Maps · Next.js  
 Architecture: Single AI orchestrator · 2 Cloud Functions · Real-time Firestore  
 ---
 
 # Tab 2
 
-# Community Hero AI — Implementation Blueprint
+# CivicPulse AI — Implementation Blueprint
 
 ---
 

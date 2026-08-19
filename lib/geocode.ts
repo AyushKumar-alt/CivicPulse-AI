@@ -42,7 +42,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Geocoded
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "CommunityHeroAI/1.0 (hackathon demo)",
+        "User-Agent": "CivicPulseAI/1.0 (hackathon demo)",
         "Accept-Language": "en",
       },
       signal: AbortSignal.timeout(8000),
