@@ -27,8 +27,12 @@ const DEPARTMENT_ACCOUNTS = [
   { email: "roads@demo.com",       dept: "roads"       },
   { email: "water@demo.com",       dept: "water"       },
   { email: "cmwssb@demo.com",      dept: "water"       },
+  { email: "bwssb@demo.com",       dept: "water"       }, // Bengaluru Water (BWSSB)
+  { email: "djb@demo.com",         dept: "water"       }, // Delhi Jal Board (DJB)
   { email: "electricity@demo.com", dept: "electricity" },
+  { email: "bescom@demo.com",      dept: "electricity" }, // Bengaluru Power (BESCOM)
   { email: "sanitation@demo.com",  dept: "sanitation"  },
+  { email: "bbmp@demo.com",        dept: "sanitation"  }, // Bengaluru Municipal (BBMP)
   { email: "traffic@demo.com",     dept: "traffic"     },
   { email: "publicworks@demo.com", dept: "publicworks" },
 ];
