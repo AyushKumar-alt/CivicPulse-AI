@@ -293,21 +293,22 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
 
     if (!imageBase64 && params.imageUrl) {
       try {
-        const imgRes = await withTimeout(
-          fetch(params.imageUrl),
-          8_000,
-          "Image fetch",
-        );
+        const imgRes = await fetch(params.imageUrl);
         if (imgRes.ok) {
-          const buffer = await imgRes.arrayBuffer();
-          const uint8 = new Uint8Array(buffer);
-          let binary = "";
-          for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
-          imageBase64 = btoa(binary);
-          imageMimeType = imgRes.headers.get("content-type")?.split(";")[0] ?? mimeTypeFromUrl(params.imageUrl);
+          const blob = await imgRes.blob();
+          const reader = new FileReader();
+          imageBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const res = reader.result as string;
+              resolve(res.split(",")[1] ?? "");
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          imageMimeType = blob.type || mimeTypeFromUrl(params.imageUrl);
         }
       } catch (fetchErr) {
-        console.warn(`[${issueId}] Image fetch failed (${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}), will use deterministic.`);
+        console.warn(`[${issueId}] Image URL fetch failed:`, fetchErr);
       }
     }
 
@@ -333,19 +334,23 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     let usedFallback = false;
 
     // Try client-side Gemini if key is present
-    if (apiKey && imageBase64) {
+    if (apiKey) {
       const ai = new GoogleGenAI({ apiKey });
       const modelsToTry = [process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
       for (const m of modelsToTry) {
         try {
           aiResult = await callWithRetry(async () => {
+            // Build parts — include inlineData if image is available, otherwise text prompt only
+            const parts: Record<string, unknown>[] = [];
+            if (imageBase64) {
+              parts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
+            }
+            parts.push({ text: prompt });
+
             const response = await withTimeout(
               ai.models.generateContent({
                 model: m,
-                contents: [{ role: "user", parts: [
-                  { inlineData: { data: imageBase64, mimeType: imageMimeType } },
-                  { text: prompt },
-                ]}],
+                contents: [{ role: "user", parts }],
                 config: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 },
               }),
               GEMINI_TIMEOUT_MS,
@@ -362,24 +367,8 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
       }
     }
 
-    // Server delegation fallback if client Gemini was unavailable or failed
+    // Final fallback if Gemini call failed or key missing
     if (!aiResult) {
-      try {
-        console.info(`[${issueId}] Delegating Gemini analysis to server route /api/analyze...`);
-        const srvRes = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ issueId }),
-        });
-        if (srvRes.ok) {
-          // Server endpoint ran analyzeIssue() and updated Firestore
-          return;
-        }
-      } catch (srvErr) {
-        console.warn(`[${issueId}] Server /api/analyze call failed:`, srvErr);
-      }
-
-      // Final fallback if both client and server Gemini calls fail
       aiResult = deterministicAnalysis(description);
       usedFallback = true;
     }
