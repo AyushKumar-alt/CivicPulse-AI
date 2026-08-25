@@ -225,3 +225,7 @@ export function resolveAgencyForIssue(city: CityCode, category: DepartmentCatego
   const fallbackKey = `generic_${category}`;
   return REGIONAL_AGENCIES[fallbackKey] ?? REGIONAL_AGENCIES.generic_publicworks;
 }
+
+export function getAgencyById(agencyId: string): RegionalAgency | null {
+  return REGIONAL_AGENCIES[agencyId] ?? null;
+}

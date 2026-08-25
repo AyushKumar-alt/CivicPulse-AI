@@ -65,25 +65,51 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   return issueId;
 }
 
-export async function getMyIssues(uid: string) {
-  const q = query(
-    collection(db, "issues"),
-    where("reporter_uid", "==", uid),
-    orderBy("submitted_at", "desc"),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+function getTimeMs(doc: any): number {
+  const ts = doc.submitted_at || doc.createdAt || doc.updated_at || doc.submittedAt;
+  if (!ts) return 0;
+  if (typeof ts === "number") return ts;
+  if (typeof ts === "string") return new Date(ts).getTime();
+  if (typeof ts.toMillis === "function") return ts.toMillis();
+  if (typeof ts.toDate === "function") return ts.toDate().getTime();
+  if (typeof ts.seconds === "number") return ts.seconds * 1000;
+  return 0;
 }
 
-export async function getCommunityIssues() {
-  const q = query(
-    collection(db, "issues"),
-    where("status", "==", "analyzed"),
-    orderBy("submitted_at", "desc"),
-    limit(30),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+export async function getMyIssues(uid: string) {
+  try {
+    const q1 = query(collection(db, "issues"), where("reporter_uid", "==", uid));
+    const q2 = query(collection(db, "issues"), where("reporterUid", "==", uid));
+    const [snap1, snap2] = await Promise.all([
+      getDocs(q1).catch(() => ({ docs: [] })),
+      getDocs(q2).catch(() => ({ docs: [] })),
+    ]);
+    const map = new Map<string, any>();
+    snap1.docs.forEach((d: any) => map.set(d.id, { id: d.id, ...d.data() }));
+    snap2.docs.forEach((d: any) => map.set(d.id, { id: d.id, ...d.data() }));
+    const userDocs = Array.from(map.values());
+    userDocs.sort((a: any, b: any) => getTimeMs(b) - getTimeMs(a));
+    return userDocs;
+  } catch (err: any) {
+    console.error("[getMyIssues Read Error]", err);
+    throw err;
+  }
+}
+
+export async function getCommunityIssues(): Promise<Record<string, unknown>[]> {
+  try {
+    const q = query(
+      collection(db, "issues"),
+      where("status", "==", "analyzed"),
+      orderBy("submitted_at", "desc"),
+      limit(30)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err: any) {
+    console.error("[getCommunityIssues Read Error]", err);
+    throw err;
+  }
 }
 
 export async function hasUserConfirmed(issueId: string, uid: string): Promise<boolean> {

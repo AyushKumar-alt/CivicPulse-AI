@@ -43,3 +43,8 @@ next-env.d.ts
 # firebase
 service-account.json
 .firebase/
+firebase-debug.log
+firestore-debug.log
+
+# scratch
+scratch/

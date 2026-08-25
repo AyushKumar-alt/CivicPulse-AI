@@ -182,7 +182,7 @@ export default function SignInPage() {
 
       // Seamless routing based on selected role
       if (role === "command") {
-        router.push("/authority");
+        router.push("/command-center");
       } else if (role === "department") {
         router.push("/department");
       } else {
@@ -190,7 +190,9 @@ export default function SignInPage() {
       }
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
-      if (msg.includes("email-already-in-use")) {
+      if (msg.includes("invalid-api-key") || msg.includes("api_key_invalid") || msg.includes("api-key")) {
+        setError("Firebase API Key is missing or unconfigured. Please set NEXT_PUBLIC_FIREBASE_API_KEY in .env.local.");
+      } else if (msg.includes("email-already-in-use")) {
         setError("An account with this email already exists. Sign in instead.");
       } else if (msg.includes("invalid-email")) {
         setError("Please enter a valid email address.");

@@ -1300,10 +1300,12 @@ export default function AuthorityPage() {
     }
   }, [authLoading, user, fetchIssues, fetchBriefing]);
 
-  // Role guard — only command centre may access this page
+  // Redirect command center users to new hierarchical Command Center (/command-center)
   useEffect(() => {
     if (authLoading || !user) return;
-    if (roleInfo.role === "department") {
+    if (roleInfo.role === "commandcenter") {
+      router.replace("/command-center");
+    } else if (roleInfo.role === "department") {
       router.replace("/department");
     } else if (roleInfo.role === "citizen") {
       router.replace("/dashboard");

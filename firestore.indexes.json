@@ -47,6 +47,44 @@
         { "fieldPath": "reporter_uid", "order": "ASCENDING" },
         { "fieldPath": "submitted_at", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAgencyId", "order": "ASCENDING" },
+        { "fieldPath": "parentIssueId", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "slaDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAgencyId", "order": "ASCENDING" },
+        { "fieldPath": "parentIssueId", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "ackDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cityId", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "slaDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAgencyId", "order": "ASCENDING" },
+        { "fieldPath": "parentIssueId", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
-import { Timestamp } from "firebase-admin/firestore";
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin";
-import { mapToDepartment } from "@/lib/departments";
-import { resolveCityFromAddress, resolveCityFromCoords, resolveAgencyForIssue, DepartmentCategory } from "@/lib/municipal";
+import { AuthContextResolver, AuthorizationPolicy } from "@/src/modules/auth";
+import { FirestoreIssueRepository } from "@/src/modules/data";
+import { RouteIssueService } from "@/src/modules/application";
 
-// H2 Fix: department assignment runs server-side via admin SDK.
-// The client writes the AI analysis result; this route reads it and assigns the department.
-// Admin SDK bypasses Firestore rules, so the reporter cannot forge their own routing.
+// H2 Fix: department assignment runs server-side via admin SDK and RouteIssueService.
+// Bypasses client-side rule overrides and deterministically routes via DeterministicRoutingEngine.
 
 export async function POST(
   request: NextRequest,
@@ -17,63 +16,38 @@ export async function POST(
   const token = request.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  let reporterUid: string;
+  let user;
   try {
     const decoded = await getAdminAuth().verifyIdToken(token);
-    reporterUid = decoded.uid;
+    user = AuthContextResolver.buildIdentity(decoded.uid, decoded.email ?? "", decoded);
   } catch {
-    return Response.json({ error: "Invalid token" }, { status: 401 });
+    return Response.json({ error: "Unauthorized: Invalid authentication token" }, { status: 401 });
   }
 
-  const db = getAdminDb();
-  const ref = db.collection("issues").doc(id);
-  const snap = await ref.get();
+  const repo = new FirestoreIssueRepository(getAdminDb());
+  const issue = await repo.getById(id);
 
-  if (!snap.exists) return Response.json({ error: "Issue not found" }, { status: 404 });
+  if (!issue) return Response.json({ error: "Issue not found" }, { status: 404 });
 
-  const data = snap.data()!;
+  // Only the original reporter or a Command Center Admin can trigger/change routing
+  const isReporter = issue.reporterUid === user.uid;
+  const canReRoute = AuthorizationPolicy.canReRouteIssue(user, issue);
 
-  // Only the reporter can trigger assignment for their own issue
-  if (data.reporter_uid !== reporterUid) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Must be in analyzed state (AI result already written by client)
-  if (data.status !== "analyzed") {
-    return Response.json({ error: "Issue not in analyzed state" }, { status: 400 });
+  if (!isReporter && !canReRoute) {
+    return Response.json({ error: "Forbidden: You do not have permission to re-route this issue" }, { status: 403 });
   }
 
   // Already assigned — idempotent
-  if (data.assigned_department) {
-    return Response.json({ ok: true, assigned: data.assigned_department });
+  if (issue.assignedAgencyId && issue.assignedAgencyId !== "UNRESOLVED") {
+    return Response.json({ ok: true, assigned: issue.categoryKey });
   }
 
-  const responsibleAuthority = (data.ai?.responsible_authority as string) || "";
-  const issueType = (data.ai?.issue_type as string) || "";
-  const summary = (data.ai?.summary as string) || "";
-  const rawDesc = (data.raw_description as string) || "";
-  const combinedText = `${responsibleAuthority} ${issueType} ${summary} ${rawDesc}`;
+  const routeService = new RouteIssueService(repo);
+  const routeResult = await routeService.routeIssue(id);
 
-  const address = (data.location?.address as string) || (data.location?.area_name as string) || "";
-  const lat = Number(data.location?.lat ?? 13.1473);
-  const lng = Number(data.location?.lng ?? 77.6200);
+  if (routeResult.isFailure) {
+    return Response.json({ error: routeResult.error.message }, { status: 400 });
+  }
 
-  const cityCode = resolveCityFromAddress(address) || resolveCityFromCoords(lat, lng);
-  const dept = mapToDepartment(responsibleAuthority, combinedText);
-  const agency = resolveAgencyForIssue(cityCode, dept.key as DepartmentCategory);
-
-  // Admin SDK write — bypasses Firestore rules intentionally
-  await ref.update({
-    assigned_department: dept.key,
-    assigned_department_name: agency.name,
-    assigned_department_email: agency.email_aliases[0] ?? dept.email,
-    assigned_agency_id: agency.agency_id,
-    city_code: cityCode,
-    assigned_at: Timestamp.now(),
-    assigned_by: "AI Analysis Agent (server)",
-    assignment_method: "AI Analysis + Municipal Agency Routing",
-    updated_at: Timestamp.now(),
-  });
-
-  return Response.json({ ok: true, assigned: dept.key });
+  return Response.json({ ok: true, assigned: issue.categoryKey });
 }

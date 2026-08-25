@@ -4,10 +4,37 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
-import { createIssue } from "@/lib/firebase/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { reverseGeocode } from "@/lib/geocode";
-import { analyzeIssueClient } from "@/lib/ai/analyzeIssueClient";
+
+function compressImageFile(file: File, maxDim = 1280, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas context failed"));
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 export default function SubmitPage() {
   const router = useRouter();
@@ -49,17 +76,13 @@ export default function SubmitPage() {
     setImageBase64(null);
     setImageError("");
     setImageUploading(true);
-    setImageMimeType(file.type || "image/jpeg");
-
-    // Read as base64 for Gemini analysis (runs client-side)
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setImageBase64(result.split(",")[1] ?? null);
-    };
-    reader.readAsDataURL(file);
+    setImageMimeType("image/jpeg");
 
     try {
+      // Compress image client-side to ~150KB before sending to eliminate timeout errors
+      const base64String = await compressImageFile(file);
+      setImageBase64(base64String);
+
       const url = await uploadToCloudinary(file);
       setImageUrl(url);
     } catch (err) {
@@ -143,35 +166,28 @@ export default function SubmitPage() {
     setError("");
     setSubmitting(true);
     try {
-      const resolvedHint =
-        contextHint === "None" ? undefined
-        : contextHint === "Other" ? (customContext.trim() || undefined)
-        : contextHint;
-
-      const issueId = await createIssue({
-        reporterUid: user.uid,
-        rawDescription: description,
-        imageUrl,
-        location,
-        contextHint: resolvedHint,
+      const token = await user.getIdToken(true);
+      const res = await fetch("/api/issue/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          imageUrl,
+          imageBase64,
+          coordinates: { latitude: location.lat, longitude: location.lng },
+          userDescription: description,
+        }),
       });
 
-      // Run Gemini 2.5 Flash AI analysis directly and await completion before navigating
-      try {
-        await analyzeIssueClient({
-          issueId,
-          imageBase64: imageBase64 ?? "",
-          imageMimeType,
-          description: description || "",
-          lat: location.lat,
-          lng: location.lng,
-          contextHint: resolvedHint ?? null,
-        });
-      } catch (clientErr) {
-        console.error("Client Gemini analysis error:", clientErr);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Submission failed with status ${res.status}`);
       }
 
-      router.push(`/issues/${issueId}`);
+      const data = (await res.json()) as { ok: boolean; issueId: string };
+      router.push(`/issues/${data.issueId}`);
     } catch (err) {
       console.error(err);
       setError("Failed to submit report. Please try again.");
@@ -193,7 +209,7 @@ export default function SubmitPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-4">
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+        <Link href="/command-center" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
           ← Back
         </Link>
         <h1 className="text-base font-semibold text-gray-900">Report an Issue</h1>

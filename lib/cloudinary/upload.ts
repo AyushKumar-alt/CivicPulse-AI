@@ -13,10 +13,13 @@ export async function uploadToCloudinary(file: File): Promise<string> {
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
   if (!cloudName || !uploadPreset) {
-    throw new Error(
-      "Cloudinary env vars missing — add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME " +
-      "and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET to .env.local"
-    );
+    console.warn("Cloudinary env vars missing — falling back to local Data URL in demo mode.");
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Local image read failed"));
+      reader.readAsDataURL(file);
+    });
   }
 
   const body = new FormData();

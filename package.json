@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "emulator": "set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot&& set PATH=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot\\bin;%PATH%&& npx firebase emulators:start --only firestore",
+    "emulator:seed": "node scripts/seed-emulator.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",

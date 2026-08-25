@@ -95,16 +95,37 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Error",
 };
 
-function formatDate(ts?: FirestoreTimestamp | null): string {
-  if (!ts) return "";
-  return new Date(ts.seconds * 1000).toLocaleDateString(undefined, {
-    day: "numeric", month: "short", year: "numeric",
+function formatDate(ts?: any): string {
+  if (!ts) return "Just now";
+  let d: Date;
+  if (typeof ts === "string") d = new Date(ts);
+  else if (typeof ts === "number") d = new Date(ts);
+  else if (ts && typeof ts === "object" && "seconds" in ts) d = new Date(ts.seconds * 1000);
+  else d = new Date(ts);
+
+  if (isNaN(d.getTime())) return "Just now";
+
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
-function addressText(issue: IssueRecord): string | null {
-  if (issue.location?.address) return issue.location.address;
-  if (issue.location) return `${issue.location.lat.toFixed(4)}, ${issue.location.lng.toFixed(4)}`;
+function addressText(issue: any): string | null {
+  const loc = issue.geoContext || issue.location;
+  const full =
+    (loc?.fullAddress && loc.fullAddress !== "Location captured" ? loc.fullAddress : null) ||
+    (loc?.formattedAddress ? loc.formattedAddress : null) ||
+    (loc?.address && loc.address !== "Location captured" ? loc.address : null) ||
+    (loc?.localityName ? loc.localityName : null) ||
+    issue.address;
+  if (full) return full;
+  const lat = typeof loc?.coordinates?.latitude === "number" ? loc.coordinates.latitude : loc?.lat;
+  const lng = typeof loc?.coordinates?.longitude === "number" ? loc.coordinates.longitude : loc?.lng;
+  if (typeof lat === "number" && typeof lng === "number") return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   return null;
 }
 
@@ -314,7 +335,7 @@ export default function DashboardPage() {
   // Redirect command center and department users to their own dashboards
   useEffect(() => {
     if (!authLoading && user) {
-      if (roleInfo.role === "commandcenter") router.replace("/authority");
+      if (roleInfo.role === "commandcenter") router.replace("/command-center");
       else if (roleInfo.role === "department") router.replace("/department");
     }
   }, [authLoading, user, roleInfo, router]);
@@ -333,7 +354,30 @@ export default function DashboardPage() {
   const [confirmedSet, setConfirmedSet] = useState(new Set<string>());
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
-  // Load My Issues + hidden IDs once user is available
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // Load Community Issues when tab is opened
+  const loadCommunity = useCallback(async () => {
+    if (!user) return;
+    setCommunityLoading(true);
+    try {
+      const data = await getCommunityIssues();
+      const all = data as unknown as IssueRecord[];
+      setCommunityIssues(all);
+
+      const checks = await Promise.all(all.map((i) => hasUserConfirmed(i.id, user.uid)));
+      const confirmed = new Set(all.filter((_, idx) => checks[idx]).map((i) => i.id));
+      setConfirmedSet(confirmed);
+      setCommunityLoaded(true);
+    } catch (e: any) {
+      console.error(e);
+      setDbError(e?.message || "Cloud database temporarily unavailable (quota or network limit).");
+    } finally {
+      setCommunityLoading(false);
+    }
+  }, [user]);
+
+  // Load My Issues & Community Issues once user is available
   useEffect(() => {
     if (!user) return;
     const hidden = getHiddenIds(user.uid);
@@ -341,31 +385,14 @@ export default function DashboardPage() {
     setMyLoading(true);
     getMyIssues(user.uid)
       .then((data) => setMyIssues(data as IssueRecord[]))
-      .catch(console.error)
+      .catch((err: any) => {
+        console.error(err);
+        setDbError(err?.message || "Cloud database temporarily unavailable (quota or network limit).");
+      })
       .finally(() => setMyLoading(false));
-  }, [user]);
 
-  // Load Community Issues lazily when tab is first opened
-  const loadCommunity = useCallback(async () => {
-    if (!user || communityLoaded) return;
-    setCommunityLoading(true);
-    try {
-      const data = await getCommunityIssues();
-      // Show ALL analyzed issues — no reporter filter
-      const all = data as IssueRecord[];
-      setCommunityIssues(all);
-
-      // Batch-check which ones the user has already confirmed
-      const checks = await Promise.all(all.map((i) => hasUserConfirmed(i.id, user.uid)));
-      const confirmed = new Set(all.filter((_, idx) => checks[idx]).map((i) => i.id));
-      setConfirmedSet(confirmed);
-      setCommunityLoaded(true);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCommunityLoading(false);
-    }
-  }, [user, communityLoaded]);
+    void loadCommunity();
+  }, [user, loadCommunity]);
 
   useEffect(() => {
     if (activeTab === "community") void loadCommunity();
@@ -490,6 +517,16 @@ export default function DashboardPage() {
 
         {/* Tab content */}
         <div className="px-6 py-5 space-y-3">
+          {dbError && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 mb-4 text-sm flex items-start gap-3">
+              <span className="text-amber-600 text-lg shrink-0">⚠️</span>
+              <div>
+                <p className="font-bold">Database Temporarily Unavailable</p>
+                <p className="text-xs text-amber-800 mt-0.5">{dbError}</p>
+              </div>
+            </div>
+          )}
+
           {activeTab === "my" && (
             <>
               {myLoading ? (

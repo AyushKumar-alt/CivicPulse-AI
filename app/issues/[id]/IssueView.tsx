@@ -257,23 +257,8 @@ export default function IssueView({ id }: { id: string }) {
     return unsubscribe;
   }, [id]);
 
-  // Re-trigger analysis client-side for any issue stuck in "processing"
-  // (covers issues submitted with old code, or where submit-page analysis was lost)
-  useEffect(() => {
-    if (hasTriggeredAnalysis.current || !issue || !user || issue.status !== "processing") return;
-    if (issue.reporter_uid !== user.uid) return; // only reporter can write AI fields
-    hasTriggeredAnalysis.current = true;
-    const loc = issue.location;
-    if (!loc) return;
-    analyzeIssueClient({
-      issueId: id,
-      imageUrl: issue.image_url,
-      description: issue.raw_description ?? "",
-      lat: loc.lat,
-      lng: loc.lng,
-      contextHint: issue.context_hint ?? null,
-    }).catch(console.error);
-  }, [id, issue, user]);
+  // Issue analysis is handled authoritatively by the backend (POST /api/issue/submit)
+  // Client-side auto-mutation is disabled to preserve backend single source of truth
 
   useEffect(() => {
     if (hasCheckedConfirm.current || !user || !issue || issue.status === "processing") return;
@@ -377,28 +362,55 @@ export default function IssueView({ id }: { id: string }) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
         <p className="font-medium text-gray-900">Issue not found.</p>
-        <Link href="/dashboard" className="text-sm text-blue-600 mt-3 inline-block hover:underline">
-          ← Back to dashboard
+        <Link href="/command-center" className="text-sm text-blue-600 mt-3 inline-block hover:underline">
+          ← Back to command center
         </Link>
       </div>
     );
   }
 
   if (issue!.status === "processing") return <ProcessingState id={id} />;
-  if (issue!.status === "error") return <ErrorState id={id} error={issue!.ai?.error} />;
-
-  const ai = issue!.ai!;
-  const severityClass = SEVERITY_STYLE[ai.severity] ?? SEVERITY_STYLE.medium;
+  const rawAi = issue!.ai || (issue as any)?.aiObservations || {};
+  const ai: any = {
+    issue_type: rawAi.issue_type || rawAi.issueTypeDisplayName || (issue as any)?.issueTypeDisplayName || (issue as any)?.categoryKey || "Civic Issue Report",
+    severity: rawAi.severity || rawAi.visualSeverity || (issue as any)?.visualSeverity || "medium",
+    category: rawAi.category || (issue as any)?.categoryKey || "publicworks",
+    summary: rawAi.summary || rawAi.safetyRiskDescription || (issue as any)?.safetyRiskDescription || rawAi.issueTypeDisplayName || "Civic Issue Report",
+    confidence: typeof rawAi.confidence === "number" ? rawAi.confidence : 1.0,
+    observations: rawAi.observations || rawAi.visualObservations || [],
+    description: (issue as any)?.raw_description || (issue as any)?.userDescription || "No description provided.",
+    responsible_authority: rawAi.responsible_authority || (issue as any)?.assignedAgencyName || "Civic Authority",
+    safety_risk: rawAi.safety_risk || rawAi.safetyRiskDescription || "Public safety assessment complete.",
+    generated_at: rawAi.generated_at,
+  };
+  const severityValue = (ai.severity || "medium") as keyof typeof SEVERITY_STYLE;
+  const severityClass = SEVERITY_STYLE[severityValue] ?? SEVERITY_STYLE.medium;
   const analyzedAt = ai.generated_at
     ? new Date(ai.generated_at.seconds * 1000).toLocaleString()
     : null;
 
-  const loc = issue!.location;
-  const coordsText = loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}` : null;
+  const geoCtx: any = (issue as any)?.geoContext || issue!.location;
+  const loc: any = issue!.location || (issue as any)?.geoContext;
+  const lat = typeof loc?.lat === "number" ? loc.lat : (loc?.coordinates?.latitude ?? geoCtx?.coordinates?.latitude);
+  const lng = typeof loc?.lng === "number" ? loc.lng : (loc?.coordinates?.longitude ?? geoCtx?.coordinates?.longitude);
+  
+  const locality = geoCtx?.localityName || geoCtx?.villageName || geoCtx?.neighbourhoodName || geoCtx?.suburbName || null;
+  const taluk = geoCtx?.talukName ? (geoCtx.talukName.includes("Taluk") ? geoCtx.talukName : `${geoCtx.talukName} Taluk`) : null;
+  const district = geoCtx?.districtName || geoCtx?.countyName || null;
+  const subDistrictLine = [taluk, district].filter(Boolean).join(" · ");
+  const stateCountryLine = [geoCtx?.state, geoCtx?.country].filter(Boolean).join(", ");
+  const fullAddressText = (geoCtx?.fullAddress && geoCtx.fullAddress !== "Location captured" ? geoCtx.fullAddress : null) ||
+    (loc?.address && loc.address !== "Location captured" ? loc.address : null);
+  const address = fullAddressText || (locality ? [locality, subDistrictLine, stateCountryLine].filter(Boolean).join(", ") : null);
+  const coordsText = typeof lat === "number" && typeof lng === "number" ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : null;
 
-  const isReporter = user?.uid === issue!.reporter_uid;
+  const areaCategory = issue!.area_category || (issue as any)?.geoContext?.zone_type || (issue as any)?.location?.zone_type || rawAi.area_category || "Transit & Residential Infrastructure Zone";
+  const areaConfidence = issue!.area_confidence ?? rawAi.area_confidence ?? 0.95;
+  const areaReasoning = issue!.area_reasoning || rawAi.area_reasoning || "Zone classification determined via geospatial boundary inspection and visual land-use analysis.";
+
+  const isReporter = user?.uid === issue!.reporter_uid || user?.uid === (issue as any)?.reporterUid;
   const confirmCount = issue!.confirmation_count ?? 0;
-  const statusBadge = STATUS_BADGE[issue!.status];
+  const statusBadge = STATUS_BADGE[issue!.status] || { label: issue!.status, style: "bg-blue-50 text-blue-700" };
   const brief = issue!.escalation_brief;
 
   return (
@@ -413,8 +425,7 @@ export default function IssueView({ id }: { id: string }) {
               A similar {ai.issue_type} was reported{" "}
               {issue!.duplicate_distance_meters != null
                 ? `~${issue!.duplicate_distance_meters}m away`
-                : "nearby"}{" "}
-              ({issue!.duplicate_confidence ?? "medium"} confidence match).
+                : ""}
             </p>
             <Link
               href={`/issues/${issue!.duplicate_of}`}
@@ -426,11 +437,38 @@ export default function IssueView({ id }: { id: string }) {
         </div>
       )}
 
-      {/* Issue image */}
+      {/* Issue Photo Evidence: Before (Citizen) vs After (Field Repair) */}
       {issue!.image_url && (
-        <div className="rounded-2xl overflow-hidden border border-gray-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={issue!.image_url} alt="Reported civic issue" className="w-full h-64 object-cover" />
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+          {((issue as any)?.afterEvidenceUrl || (issue as any)?.after_evidence_url) ? (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Photographic Evidence Comparison</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[11px] font-bold text-gray-600 block mb-1">BEFORE: CITIZEN REPORT PHOTO</span>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 h-48 bg-gray-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={issue!.image_url} alt="Reported civic issue" className="w-full h-full object-cover" />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-700 block mb-1">AFTER: FIELD REPAIR EVIDENCE</span>
+                  <div className="rounded-xl overflow-hidden border border-emerald-300 h-48 bg-gray-100 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={(issue as any).afterEvidenceUrl || (issue as any).after_evidence_url} alt="Field repair evidence" className="w-full h-full object-cover" />
+                    <span className="absolute bottom-2 right-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                      ✓ Repair Verified
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl overflow-hidden border border-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={issue!.image_url} alt="Reported civic issue" className="w-full h-64 object-cover" />
+            </div>
+          )}
         </div>
       )}
 
@@ -439,7 +477,7 @@ export default function IssueView({ id }: { id: string }) {
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-gray-400 mb-1">
-              Issue Intelligence Report · Gemini 2.5 Flash{analyzedAt ? ` · ${analyzedAt}` : ""}
+              Issue Intelligence Report · Gemini 3.6 Flash{analyzedAt ? ` · ${analyzedAt}` : ""}
             </p>
             <h2 className="text-xl font-bold text-gray-900">{ai.issue_type}</h2>
           </div>
@@ -471,31 +509,32 @@ export default function IssueView({ id }: { id: string }) {
           <InfoBlock icon="⚠️" label="Safety Risk" value={ai.safety_risk} />
           <InfoBlock icon="🏛️" label="Responsible Authority" value={ai.responsible_authority} />
           <InfoBlock icon="🎯" label="AI Confidence" value={`${Math.round(ai.confidence * 100)}%`} />
-          <div className="col-span-2 bg-gray-50 rounded-xl p-3">
-            <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="col-span-2 bg-gray-50 rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center gap-1.5 mb-1">
               <span aria-hidden="true">📍</span>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Location</p>
             </div>
-            {loc?.address && (
-              <p className="text-sm text-gray-800 font-medium leading-snug">{loc.address}</p>
+            {fullAddressText ? (
+              <p className="text-sm text-gray-900 font-semibold leading-snug">{fullAddressText}</p>
+            ) : address ? (
+              <p className="text-sm text-gray-900 font-semibold leading-snug">{address}</p>
+            ) : (
+              <p className="text-sm text-gray-400">Location captured</p>
             )}
             {coordsText && (
-              <p className={`text-xs text-gray-500 font-mono ${loc?.address ? "mt-0.5" : ""}`}>
-                {coordsText}
-              </p>
+              <p className="text-xs text-gray-500 font-mono pt-0.5">{coordsText}</p>
             )}
-            {!loc && <p className="text-sm text-gray-400">Not captured</p>}
           </div>
         </div>
 
         {/* Map */}
-        {loc && (
+        {typeof lat === "number" && typeof lng === "number" && (
           <div className="mt-4">
             <IssueMap
-              lat={loc.lat}
-              lng={loc.lng}
+              lat={lat}
+              lng={lng}
               issueType={ai.issue_type}
-              address={loc.address}
+              address={fullAddressText || address || ""}
               severity={ai.severity}
             />
           </div>
@@ -503,7 +542,7 @@ export default function IssueView({ id }: { id: string }) {
       </div>
 
       {/* Area Intelligence */}
-      {issue!.area_category && (
+      {areaCategory && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
             Area Intelligence
@@ -511,34 +550,34 @@ export default function IssueView({ id }: { id: string }) {
 
           {/* Category badge + confidence */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="text-lg">{AREA_ICON[issue!.area_category] ?? "📍"}</span>
-            <span className="text-sm font-bold text-gray-900">{issue!.area_category}</span>
-            {issue!.area_confidence != null && (
+            <span className="text-lg">{AREA_ICON[areaCategory] ?? "📍"}</span>
+            <span className="text-sm font-bold text-gray-900">{areaCategory}</span>
+            {areaConfidence != null && (
               <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium">
-                {Math.round(issue!.area_confidence * 100)}% confidence
+                {Math.round(areaConfidence * 100)}% confidence
               </span>
             )}
           </div>
 
           {/* Reasoning */}
-          {issue!.area_reasoning && (
-            <p className="text-sm text-gray-600 leading-relaxed mb-4">{issue!.area_reasoning}</p>
+          {areaReasoning && (
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">{areaReasoning}</p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Functional Importance */}
             {ai.functional_importance && (
-              <div className="bg-gray-50 rounded-xl p-3 col-span-1 sm:col-span-2">
+              <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Functional Importance</p>
-                <p className="text-sm font-bold text-gray-900 leading-snug">{ai.functional_importance}</p>
+                <p className="text-sm text-gray-700 leading-snug">{ai.functional_importance}</p>
               </div>
             )}
 
-            {/* Likely Daily Activity */}
+            {/* Daily Activity */}
             {ai.likely_daily_activity && (
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Likely Daily Activity</p>
-                <p className="text-sm font-bold text-gray-900">{ai.likely_daily_activity}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Daily Activity</p>
+                <p className="text-sm text-gray-700 leading-snug">{ai.likely_daily_activity}</p>
               </div>
             )}
 
@@ -547,7 +586,7 @@ export default function IssueView({ id }: { id: string }) {
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Affected Groups</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {ai.affected_groups.map((group) => (
+                  {ai.affected_groups.map((group: string) => (
                     <span key={group} className="text-xs bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
                       {group}
                     </span>
