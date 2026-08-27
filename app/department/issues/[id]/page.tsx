@@ -426,29 +426,36 @@ export default function DepartmentIssueWorkOrderPage({ params }: { params: Promi
           </span>
         </div>
 
-        <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-3 text-xs">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">Crew Required</p>
-              <p className="font-bold text-gray-900 mt-0.5">Municipal Works Field Crew</p>
-              <p className="text-[11px] text-gray-600">Civil Engineer, Heavy Machinery Operator, Plumber/Electrician</p>
+        {(() => {
+          const estHours = (issue.ai as any)?.estimated_work_hours || (issue as any)?.ai_observations?.estimated_work_hours || 12;
+          const workers = Math.max(2, Math.min(8, Math.ceil(estHours / 4)));
+          const days = Math.max(1, Math.ceil(estHours / 8));
+          return (
+            <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Crew Required</p>
+                  <p className="font-bold text-gray-900 mt-0.5">Municipal Works Field Crew</p>
+                  <p className="text-[11px] text-gray-600">Civil Engineer, Repair Specialist</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Workers Needed</p>
+                  <p className="text-lg font-black text-blue-900 mt-0.5">{workers} Workers</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Est. Duration</p>
+                  <p className="font-bold text-gray-900 mt-0.5">{days} {days === 1 ? "working day" : "working days"}</p>
+                  <p className="text-[11px] text-gray-600">(~{estHours} man-hours total)</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Expected Completion</p>
+                  <p className="font-bold text-gray-900 mt-0.5">{days} working day(s)</p>
+                  <p className="text-[11px] text-gray-600">subject to weather clearance</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">Workers Needed</p>
-              <p className="text-lg font-black text-blue-900 mt-0.5">8 Workers</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">Est. Duration</p>
-              <p className="font-bold text-gray-900 mt-0.5">15 working days</p>
-              <p className="text-[11px] text-gray-600">(~120 man-hours total)</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-gray-500 uppercase">Expected Completion</p>
-              <p className="font-bold text-gray-900 mt-0.5">15 working day(s)</p>
-              <p className="text-[11px] text-gray-600">subject to weather clearance</p>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Repair Steps */}
         <div>

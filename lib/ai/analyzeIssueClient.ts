@@ -259,16 +259,18 @@ function deterministicAnalysis(description: string): AiResult {
   else if (/large|major|serious|significant|broken|bust|overflow|flood|hole/i.test(text)) severity = "high";
   else if (/minor|small|little|slight|crack/i.test(text)) severity = "low";
 
-  const priorityMap: Record<AiResult["severity"], number> = { critical: 9.8, high: 8.5, medium: 6.5, low: 4.0 };
-  const impactMap: Record<AiResult["severity"], number> = { critical: 9.5, high: 7.8, medium: 5.5, low: 3.2 };
+  const priorityMap: Record<AiResult["severity"], number> = { critical: 9.5, high: 7.8, medium: 5.4, low: 3.2 };
+  const impactMap: Record<AiResult["severity"], number> = { critical: 9.2, high: 7.5, medium: 5.2, low: 3.0 };
+  const populationMap: Record<AiResult["severity"], string> = { critical: "~300-500 residents", high: "~150 residents", medium: "~50 residents", low: "~20 residents" };
+  const workHoursMap: Record<AiResult["severity"], number> = { critical: 24, high: 12, medium: 6, low: 3 };
 
   const area_reasoning = "The image clearly shows an active community setting surrounded by residential homes, local commercial access routes, and public thoroughfares. The provided address and citizen context confirm it as a primary residential colony.";
-  const functional_importance = `This location is critical for providing essential ${issue_type.toLowerCase()} services to surrounding residential homes and local commuters. The damaged infrastructure disrupts daily life and creates a significant hazard for residents and pedestrians.`;
+  const functional_importance = `This location is critical for providing essential ${issue_type.toLowerCase()} services to surrounding residential homes and local commuters. The damaged infrastructure disrupts daily life and creates a safety hazard.`;
   const likely_daily_activity = "Living, local commuting, pedestrian movement, local business access";
-  const affected_groups = ["Residents", "Pedestrians", "Local commuters", "Emergency Services"];
-  const estimated_population_impact = "~500 residents within immediate 200m radius";
-  const impact_reasoning = `The impact is extremely high due to potential life-safety risks and service disruption to local households. Rapid response is required to prevent property damage and restore safety.`;
-  const priority_reasoning = `This issue warrants critical priority due to the severe public safety hazard and the disruption of an essential community utility service. Rapid response is necessary to prevent injury and restore full functionality.`;
+  const affected_groups = ["Residents", "Pedestrians", "Local commuters"];
+  const estimated_population_impact = populationMap[severity];
+  const impact_reasoning = `The practical impact is ${severity === "critical" || severity === "high" ? "high" : "moderate"} due to safety risks and potential service disruption to local households. Prompt municipal response is recommended.`;
+  const priority_reasoning = `Assigned priority level ${priorityMap[severity]}/10 based on public safety impact, risk of structural escalation, and utility service availability.`;
 
   return {
     issue_type, severity, confidence: 0.95,
@@ -283,7 +285,7 @@ function deterministicAnalysis(description: string): AiResult {
     priority_score: priorityMap[severity], priority_reasoning,
     context_used: true, context_influence: "high",
     repair_complexity: severity === "critical" ? "complex" : severity === "high" ? "high" : "medium",
-    repair_category, estimated_work_hours: severity === "critical" ? 120 : severity === "high" ? 48 : 16,
+    repair_category, estimated_work_hours: workHoursMap[severity],
     weather_sensitive: true, inspection_required: true,
     temporary_public_safety_required: severity === "critical" || severity === "high",
     required_equipment, required_skills, operational_constraints,
