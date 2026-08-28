@@ -31,10 +31,7 @@ export class GeminiAIAdapter implements AIProvider {
     }
 
     try {
-      const apiKey =
-        process.env.GEMINI_API_KEY ||
-        process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-        process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      const apiKey = this.config.apiKey || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
       if (apiKey) {
         // Direct Google Gemini API call
@@ -91,49 +88,58 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
 }`;
         parts.push({ text: prompt });
 
-        const modelName = "gemini-3.6-flash";
+        const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+        const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
         let lastErrorMsg = "";
 
-        try {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-          const res = await this.fetchImpl(geminiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts }],
-              generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
-            }),
-            signal: AbortSignal.timeout(45000),
-          });
+        for (const modelName of modelsToTry) {
+          try {
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const res = await this.fetchImpl(geminiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ role: "user", parts }],
+                generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+              }),
+              signal: AbortSignal.timeout(30000),
+            });
 
-          if (res.ok) {
-            const rawData = (await res.json()) as any;
-            const text = rawData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-            if (text) {
-              const parsed = JSON.parse(text);
-              return this.parseClassificationResponse(parsed, userDescription);
+            if (res.ok) {
+              const rawData = (await res.json()) as any;
+              const text = rawData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+              if (text) {
+                const parsed = JSON.parse(text);
+                return this.parseClassificationResponse(parsed, userDescription);
+              }
+            } else {
+              const errText = await res.text().catch(() => "");
+              lastErrorMsg = `Gemini API (${modelName}) HTTP ${res.status}: ${errText.slice(0, 150)}`;
+              if (res.status === 404 || res.status === 503 || res.status === 429) {
+                continue;
+              }
+              break;
             }
-          } else {
-            const errText = await res.text().catch(() => "");
-            lastErrorMsg = `Gemini API (${modelName}) HTTP ${res.status}: ${errText.slice(0, 150)}`;
+          } catch (modelErr) {
+            lastErrorMsg = String(modelErr);
           }
-        } catch (modelErr) {
-          lastErrorMsg = String(modelErr);
         }
 
         return this.createFallbackObservations(userDescription, lastErrorMsg || "Gemini API unavailable");
       }
 
-      // Proxy Fallback if apiKey is absent
-      let endpoint = this.config.proxyUrl ?? "/api/analyze-proxy";
-      if (endpoint.startsWith("/") && typeof window === "undefined") {
-        endpoint = `http://localhost:3000${endpoint}`;
+      // If running on server side without GEMINI_API_KEY, explicitly fail instead of fetching localhost
+      if (typeof window === "undefined") {
+        return this.createFallbackObservations(userDescription, "GEMINI_API_KEY is not configured on server");
       }
+
+      // Client-side Proxy Fallback
+      const endpoint = this.config.proxyUrl ?? "/api/analyze-proxy";
       const res = await this.fetchImpl(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64, userDescription }),
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(30000),
       });
 
       if (!res.ok) {

@@ -209,7 +209,7 @@ Return ONLY valid JSON — no markdown, no extra text:
     }
 
     const response = await ai.models.generateContent({
-      model: process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-3.6-flash",
+      model: process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.5-flash",
       contents: [{ role: "user", parts }],
       config: { temperature: 0.2, maxOutputTokens: 700, responseMimeType: "application/json" },
     });

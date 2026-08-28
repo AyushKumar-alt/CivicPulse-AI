@@ -11,8 +11,12 @@ function createAdminApp() {
 
   // 1. Explicit production key: set FIREBASE_SERVICE_ACCOUNT_JSON to the full JSON string
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    return initializeApp({ credential: cert(sa), projectId: sa.project_id || projectId });
+    try {
+      const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      return initializeApp({ credential: cert(sa), projectId: sa.project_id || projectId });
+    } catch (parseError) {
+      console.error("[Firebase Admin] SyntaxError parsing FIREBASE_SERVICE_ACCOUNT_JSON environment variable:", parseError);
+    }
   }
 
   // 2. Local development fallback: if service-account.json exists in root, prefer it locally
@@ -31,6 +35,10 @@ function createAdminApp() {
     } catch (readError) {
       console.warn("Failed to read local service-account.json at " + localSaPath + ", trying other methods...", readError);
     }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.warn("[Firebase Admin] WARNING: FIREBASE_SERVICE_ACCOUNT_JSON is missing in production environment. Admin SDK will initialize unauthenticated.");
   }
 
   // 3. Environment Variable Fallback for ID Token Verification

@@ -466,7 +466,8 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
     let aiResult: AiResult | null = null;
     let usedFallback = false;
 
-    const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+    const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
     let lastError: unknown = null;
 
     for (const m of modelsToTry) {

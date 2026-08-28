@@ -11,13 +11,12 @@ export async function POST(request: Request) {
 
     const apiKey =
       process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
     if (!apiKey) {
       console.error("[GEMINI PROXY ERROR] Missing Gemini API key in process.env");
       return Response.json(
-        { error: "Gemini API key missing on server. Set GEMINI_API_KEY in .env.local.", status: "FAILED" },
+        { error: "GEMINI_API_KEY is not configured on server", status: "FAILED" },
         { status: 500 }
       );
     }
@@ -76,7 +75,8 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
     }
     parts.push({ text: prompt || defaultPrompt });
 
-    const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+    const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
     let lastError = "";
 
     for (const m of modelsToTry) {
@@ -95,6 +95,7 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
               maxOutputTokens: 4096,
             },
           }),
+          signal: AbortSignal.timeout(30000),
         });
 
         if (response.ok) {

@@ -355,66 +355,45 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
     const safeDescription = sanitizeUserInput(description) || "No description provided.";
     const prompt = buildPrompt(safeDescription, lat, lng, geo, contextHint ?? null, authorities);
 
-    let apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      try {
-        const keyRes = await fetch("/api/get-gemini-key");
-        if (keyRes.ok) {
-          const keyData = (await keyRes.json()) as { key?: string };
-          apiKey = keyData.key ?? "";
-        }
-      } catch (keyErr) {
-        console.warn("Failed to fetch Gemini API key from server route:", keyErr);
-      }
-    }
-
     let aiResult: AiResult | null = null;
     let usedFallback = false;
 
-    // Try client-side Gemini if key is present
-    if (apiKey) {
-      const modelsToTry = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
-      for (const m of modelsToTry) {
-        try {
-          aiResult = await callWithRetry(async () => {
-            // Build parts — include inline_data if image is available, otherwise text prompt only
-            const parts: Record<string, unknown>[] = [];
-            if (imageBase64) {
-              parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
-            }
-            parts.push({ text: prompt });
+    // Call server-side analyze proxy securely
+    try {
+      aiResult = await callWithRetry(async () => {
+        const apiRes = await withTimeout(
+          fetch("/api/analyze-proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt,
+              imageBase64,
+              userDescription: safeDescription,
+              mimeType: imageMimeType,
+            }),
+          }),
+          GEMINI_TIMEOUT_MS,
+          "Gemini proxy",
+        );
 
-            const apiRes = await withTimeout(
-              fetch("/api/analyze-proxy", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  prompt,
-                  imageBase64,
-                  mimeType: imageMimeType,
-                }),
-              }),
-              GEMINI_TIMEOUT_MS,
-              "Gemini proxy",
-            );
-
-            if (!apiRes.ok) {
-              const errTxt = await apiRes.text().catch(() => "");
-              throw new Error(`Gemini proxy HTTP ${apiRes.status}: ${errTxt.slice(0, 150)}`);
-            }
-
-            const resJson = (await apiRes.json()) as {
-              candidates?: { content?: { parts?: { text?: string }[] } }[];
-            };
-            const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-            return JSON.parse(extractJson(rawText)) as AiResult;
-          }, issueId);
-          if (aiResult) break;
-        } catch (geminiErr) {
-          const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-          console.warn(`[${issueId}] Model ${m} failed (${msg.slice(0, 80)}).`);
+        if (!apiRes.ok) {
+          const errTxt = await apiRes.text().catch(() => "");
+          throw new Error(`Gemini proxy HTTP ${apiRes.status}: ${errTxt.slice(0, 150)}`);
         }
-      }
+
+        const resJson = (await apiRes.json()) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+          error?: string;
+        };
+        if (resJson.error) {
+          throw new Error(resJson.error);
+        }
+        const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+        return JSON.parse(extractJson(rawText)) as AiResult;
+      }, issueId);
+    } catch (geminiErr) {
+      const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+      console.warn(`[${issueId}] Gemini proxy call failed: ${msg.slice(0, 120)}`);
     }
 
     // Final fallback if Gemini call failed or key missing

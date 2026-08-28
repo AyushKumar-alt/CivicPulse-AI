@@ -171,7 +171,7 @@ Return ONLY valid JSON — no markdown, no extra text:
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-3.6-flash",
+      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         temperature: 0.4,
