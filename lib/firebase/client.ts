@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyB4-ed0rdvC0WBXk_hB72rzeU9RdF3nV4A",
@@ -13,10 +13,14 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = (globalThis as any)._firestoreDb || getFirestore(app);
+
+// Explicitly target Enterprise database ID "default"
+export const db =
+  (globalThis as any)._firestoreDb ||
+  initializeFirestore(app, {}, "default");
 (globalThis as any)._firestoreDb = db;
 
-const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+const isEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" || (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
 
 if (
   isEmulator &&
