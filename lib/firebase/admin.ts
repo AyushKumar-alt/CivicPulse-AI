@@ -1,3 +1,7 @@
+if ((process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() !== "true") {
+  delete process.env.FIRESTORE_EMULATOR_HOST;
+}
+
 import { initializeApp, getApps, getApp, deleteApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
