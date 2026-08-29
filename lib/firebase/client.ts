@@ -15,8 +15,10 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+
 if (
-  process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" &&
+  isEmulator &&
   !(globalThis as any)._firestoreEmulatorConnected
 ) {
   try {

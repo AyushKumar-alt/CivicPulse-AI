@@ -97,7 +97,10 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             const res = await this.fetchImpl(geminiUrl, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey,
+              },
               body: JSON.stringify({
                 contents: [{ role: "user", parts }],
                 generationConfig: { responseMimeType: "application/json", temperature: 0.1 },

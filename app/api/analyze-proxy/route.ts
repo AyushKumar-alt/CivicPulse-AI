@@ -86,6 +86,7 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
           },
           body: JSON.stringify({
             contents: [{ role: "user", parts }],
