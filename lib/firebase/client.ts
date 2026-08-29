@@ -4,8 +4,8 @@ import { getFirestore, initializeFirestore, connectFirestoreEmulator } from "fir
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyB4-ed0rdvC0WBXk_hB72rzeU9RdF3nV4A",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "community-hero-ai.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "community-hero-ai",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "community-hero-ai-1d497.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "community-hero-ai-1d497",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "557926018360",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:557926018360:web:1be99ec1092a36c60765cd",
 };
