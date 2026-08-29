@@ -5,6 +5,11 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
 function createAdminApp() {
+  const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+  if (!isEmulator) {
+    delete process.env.FIRESTORE_EMULATOR_HOST;
+  }
+
   const projectId =
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID;
@@ -74,10 +79,14 @@ function getAdminApp() {
 let _adminDb: ReturnType<typeof getFirestore> | null = null;
 
 export function getAdminDb() {
+  const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+  if (!isEmulator) {
+    delete process.env.FIRESTORE_EMULATOR_HOST;
+  }
+
   if (!_adminDb) {
     _adminDb = getFirestore(getAdminApp(), "default");
     try {
-      const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
       if (isEmulator && process.env.FIRESTORE_EMULATOR_HOST) {
         _adminDb.settings({ ignoreUndefinedProperties: true });
         console.log(`[Firebase Admin] Connected to local Firestore Emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
