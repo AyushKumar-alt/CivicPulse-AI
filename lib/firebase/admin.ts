@@ -77,11 +77,13 @@ export function getAdminDb() {
   if (!_adminDb) {
     _adminDb = getFirestore(getAdminApp(), "default");
     try {
-      if (process.env.FIRESTORE_EMULATOR_HOST) {
+      const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+      if (isEmulator && process.env.FIRESTORE_EMULATOR_HOST) {
         _adminDb.settings({ ignoreUndefinedProperties: true });
         console.log(`[Firebase Admin] Connected to local Firestore Emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
       } else {
         _adminDb.settings({ preferRest: true, ignoreUndefinedProperties: true });
+        console.log("[Firebase Admin] Connected to Live Cloud Firestore (community-hero-ai-1d497)");
       }
     } catch {
       // Settings already applied

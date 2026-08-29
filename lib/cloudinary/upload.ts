@@ -13,13 +13,7 @@ export async function uploadToCloudinary(file: File): Promise<string> {
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
   if (!cloudName || !uploadPreset) {
-    console.warn("Cloudinary env vars missing — falling back to local Data URL in demo mode.");
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Local image read failed"));
-      reader.readAsDataURL(file);
-    });
+    return compressImageToDataUrl(file, 800, 0.6);
   }
 
   const body = new FormData();
@@ -40,4 +34,36 @@ export async function uploadToCloudinary(file: File): Promise<string> {
 
   const data = await res.json() as { secure_url: string };
   return data.secure_url;
+}
+
+function compressImageToDataUrl(file: File, maxDim = 800, quality = 0.6): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve((e.target?.result as string) || "");
+      img.src = (e.target?.result as string) || "";
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
 }
