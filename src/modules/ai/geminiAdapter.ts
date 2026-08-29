@@ -7,6 +7,7 @@ import type {
 } from "@/src/modules/contracts";
 import { TaxonomyEngine } from "@/src/modules/taxonomy";
 import { ValidationError } from "@/src/modules/core";
+import { getGeminiModelChain, GeminiAttemptLog } from "@/lib/ai/geminiModelResolver";
 
 export interface GeminiAdapterConfig {
   apiKey?: string;
@@ -88,9 +89,8 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
 }`;
         parts.push({ text: prompt });
 
-        const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-        const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
-        let lastErrorMsg = "";
+        const modelsToTry = getGeminiModelChain();
+        const attempts: GeminiAttemptLog[] = [];
 
         for (const modelName of modelsToTry) {
           try {
@@ -113,20 +113,37 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
               const text = rawData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
               if (text) {
                 const parsed = JSON.parse(text);
+                if (typeof parsed === "object" && parsed !== null) {
+                  parsed.modelUsed = modelName;
+                }
                 return this.parseClassificationResponse(parsed, userDescription);
               }
             } else {
               const errText = await res.text().catch(() => "");
-              lastErrorMsg = `Gemini API (${modelName}) HTTP ${res.status}: ${errText.slice(0, 150)}`;
+              attempts.push({
+                model: modelName,
+                status: res.status,
+                message: errText.slice(0, 150),
+              });
               if (res.status === 404 || res.status === 503 || res.status === 429) {
                 continue;
               }
               break;
             }
           } catch (modelErr) {
-            lastErrorMsg = String(modelErr);
+            attempts.push({
+              model: modelName,
+              status: 0,
+              message: String(modelErr).slice(0, 150),
+            });
           }
         }
+
+        console.error("[GEMINI ADAPTER] All inference attempts failed:", attempts);
+        const lastErr = attempts[attempts.length - 1];
+        const lastErrorMsg = lastErr
+          ? `Gemini API (${lastErr.model}) HTTP ${lastErr.status}: ${lastErr.message}`
+          : "Gemini API unavailable";
 
         return this.createFallbackObservations(userDescription, lastErrorMsg || "Gemini API unavailable");
       }

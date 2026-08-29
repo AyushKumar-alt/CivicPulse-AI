@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getPrimaryGeminiModel } from "./geminiModelResolver";
 import type { IssueIntelligenceReport, ActionPlanSummary } from "./types";
 
 export interface VerificationInput {
@@ -229,7 +230,7 @@ Return ONLY valid JSON — no markdown, no extra text:
     }
 
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts }],
       config: {
         temperature: 0.2,

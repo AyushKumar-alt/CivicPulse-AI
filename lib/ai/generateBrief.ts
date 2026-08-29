@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { GoogleGenAI } from "@google/genai";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { getPrimaryGeminiModel } from "./geminiModelResolver";
 
 export interface EscalationBrief {
   title: string;
@@ -59,7 +60,7 @@ Return ONLY valid JSON — no markdown, no code fences:
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 600 },
     });

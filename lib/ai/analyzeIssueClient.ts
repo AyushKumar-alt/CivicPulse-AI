@@ -6,6 +6,7 @@ import { getRegionalAuthorities, type RegionalAuthorities } from "@/lib/municipa
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface AiResult {
+  modelUsed?: string;
   issue_type: string;
   severity: "low" | "medium" | "high" | "critical";
   confidence: number;
@@ -384,12 +385,17 @@ export async function analyzeIssueClient(params: AnalyzeClientParams): Promise<v
         const resJson = (await apiRes.json()) as {
           candidates?: { content?: { parts?: { text?: string }[] } }[];
           error?: string;
+          modelUsed?: string;
         };
         if (resJson.error) {
           throw new Error(resJson.error);
         }
         const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-        return JSON.parse(extractJson(rawText)) as AiResult;
+        const parsed = JSON.parse(extractJson(rawText)) as AiResult;
+        if (resJson.modelUsed) {
+          parsed.modelUsed = resJson.modelUsed;
+        }
+        return parsed;
       }, issueId);
     } catch (geminiErr) {
       const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);

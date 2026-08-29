@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { GoogleGenAI } from "@google/genai";
+import { getPrimaryGeminiModel } from "./geminiModelResolver";
 import { getAdminDb } from "@/lib/firebase/admin";
 
 interface CommunitySummaryResult {
@@ -88,7 +89,7 @@ Return only valid JSON. No markdown, no code fences, no explanation.`;
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",

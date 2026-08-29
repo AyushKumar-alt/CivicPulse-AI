@@ -346,7 +346,7 @@ function deterministicGovernanceReview(input: GovernanceInput): GovernanceOutput
 
 // ── Gemini path ──────────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+import { getPrimaryGeminiModel } from "./geminiModelResolver";
 
 export async function generateGovernanceReview(input: GovernanceInput, _keyOverride?: string): Promise<GovernanceOutput> {
   const apiKey = _keyOverride ?? process.env.GEMINI_API_KEY;
@@ -432,7 +432,7 @@ Provide a governance review as JSON with exactly these fields:
   try {
     const ai = new GoogleGenAI({ apiKey });
     const result = await ai.models.generateContent({
-      model: GEMINI_MODEL,
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",

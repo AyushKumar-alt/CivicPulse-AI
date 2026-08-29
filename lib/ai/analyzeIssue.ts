@@ -4,10 +4,12 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { reverseGeocode, type GeocodedLocation } from "@/lib/geocode";
 import { generateEscalationBrief } from "./generateBrief";
 import { mapToDepartment } from "@/lib/departments";
+import { getGeminiModelChain, GeminiAttemptLog } from "@/lib/ai/geminiModelResolver";
 
 // ── Gemini response shape ────────────────────────────────────────────────────
 
 interface AiResult {
+  modelUsed?: string;
   // Core classification
   issue_type: string;
   severity: "low" | "medium" | "high" | "critical";
@@ -466,8 +468,8 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
     let aiResult: AiResult | null = null;
     let usedFallback = false;
 
-    const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
+    const modelsToTry = getGeminiModelChain();
+    const attempts: GeminiAttemptLog[] = [];
     let lastError: unknown = null;
 
     for (const m of modelsToTry) {
@@ -480,7 +482,6 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
               headers: {
                 "Content-Type": "application/json",
                 "x-goog-api-key": apiKey,
-                "Authorization": `Bearer ${apiKey}`,
               },
               body: JSON.stringify({
                 contents: [
@@ -505,7 +506,12 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
 
           if (!response.ok) {
             const errBody = await response.text().catch(() => "");
-            throw new Error(`Gemini HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+            attempts.push({
+              model: m,
+              status: response.status,
+              message: errBody.slice(0, 150),
+            });
+            throw new Error(`Gemini HTTP ${response.status}: ${errBody.slice(0, 150)}`);
           }
 
           const resJson = (await response.json()) as {
@@ -513,7 +519,9 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
           };
           const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
           const jsonText = extractJson(rawText);
-          return JSON.parse(jsonText) as AiResult;
+          const parsed = JSON.parse(jsonText) as AiResult;
+          parsed.modelUsed = m;
+          return parsed;
         }, issueId);
         if (aiResult) break;
       } catch (geminiErr) {
@@ -524,6 +532,7 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
     }
 
     if (!aiResult) {
+      console.error(`[analyzeIssue][${issueId}] All Gemini inference models failed:`, attempts);
       const msg = lastError instanceof Error ? lastError.message : String(lastError);
       console.warn(`[${issueId}] All Gemini models failed (${msg.slice(0, 80)}), using deterministic fallback.`);
       aiResult = deterministicAnalysis(description.trim());

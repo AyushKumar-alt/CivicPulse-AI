@@ -1,3 +1,5 @@
+import { getGeminiModelChain, GeminiAttemptLog } from "@/lib/ai/geminiModelResolver";
+
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
@@ -75,9 +77,8 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
     }
     parts.push({ text: prompt || defaultPrompt });
 
-    const configuredModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const modelsToTry = Array.from(new Set([configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]));
-    let lastError = "";
+    const modelsToTry = getGeminiModelChain();
+    const attempts: GeminiAttemptLog[] = [];
 
     for (const m of modelsToTry) {
       try {
@@ -100,23 +101,41 @@ Return ONLY valid JSON matching this exact structure with rich, highly descripti
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as any;
+          if (data && typeof data === "object") {
+            data.modelUsed = m;
+          }
           return Response.json(data);
         } else {
-          lastError = await response.text().catch(() => "");
-          console.warn(`[GEMINI PROXY WARNING] ${m} HTTP ${response.status}: ${lastError.slice(0, 150)}`);
+          const errTxt = await response.text().catch(() => "");
+          attempts.push({
+            model: m,
+            status: response.status,
+            message: errTxt.slice(0, 150),
+          });
+          console.warn(`[GEMINI PROXY WARNING] ${m} HTTP ${response.status}: ${errTxt.slice(0, 150)}`);
           if (response.status === 404 || response.status === 503 || response.status === 429) {
             continue;
           }
           break;
         }
       } catch (e) {
-        lastError = String(e);
+        attempts.push({
+          model: m,
+          status: 0,
+          message: String(e).slice(0, 150),
+        });
       }
     }
 
+    console.error("[GEMINI PROXY ERROR] All inference attempts failed:", attempts);
+    const lastErr = attempts[attempts.length - 1];
+    const userErrMsg = lastErr
+      ? `Gemini API (${lastErr.model}) HTTP ${lastErr.status}: ${lastErr.message}`
+      : "Gemini API inference failed";
+
     return Response.json(
-      { error: `Gemini API HTTP Error: ${lastError.slice(0, 300)}`, status: "FAILED" },
+      { error: userErrMsg, status: "FAILED", attempts },
       { status: 500 }
     );
   } catch (err) {

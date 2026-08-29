@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getPrimaryGeminiModel } from "./geminiModelResolver";
 import type { IssueIntelligenceReport } from "./types";
 
 export interface BriefingIssueGovernance {
@@ -339,7 +340,7 @@ Rules: Be direct. Name specific departments, issue types, and locations. No bull
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.3, maxOutputTokens: 600 },
     });

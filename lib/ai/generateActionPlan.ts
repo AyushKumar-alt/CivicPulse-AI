@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { getPrimaryGeminiModel } from "@/lib/ai/geminiModelResolver";
 import type { IssueIntelligenceReport } from "./types";
 
 export interface ActionPlanInput {
@@ -372,7 +373,7 @@ export async function generateActionPlan(input: ActionPlanInput, _keyOverride?: 
 
   const iirText = formatIIR(input.iir, input.address);
   console.log(`[ActionPlan:generate] IIR summary: "${input.iir.summary?.substring(0, 80)}"`);
-  console.log(`[ActionPlan:generate] Model: ${process.env.GEMINI_MODEL ?? "gemini-3.6-flash"}`);
+  console.log(`[ActionPlan:generate] Model: ${getPrimaryGeminiModel()}`);
 
   const prompt = `You are the Operational Planning Agent for ${input.departmentName}.
 
@@ -410,7 +411,7 @@ Return ONLY valid JSON — no markdown, no extra text:
     console.log(`[ActionPlan:generate] Calling Gemini API...`);
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+      model: getPrimaryGeminiModel(),
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         temperature: 0.3,

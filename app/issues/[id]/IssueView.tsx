@@ -487,7 +487,7 @@ export default function IssueView({ id }: { id: string }) {
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-gray-400 mb-1">
-              Issue Intelligence Report · Gemini 3.6 Flash{analyzedAt ? ` · ${analyzedAt}` : ""}
+              Issue Intelligence Report · {(ai as any)?.modelUsed || (ai as any)?.model_used || "Gemini 2.5 Flash"}{analyzedAt ? ` · ${analyzedAt}` : ""}
             </p>
             <h2 className="text-xl font-bold text-gray-900">{ai.issue_type}</h2>
           </div>
