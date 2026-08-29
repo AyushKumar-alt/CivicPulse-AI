@@ -13,11 +13,10 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, "default");
+export const db = getFirestore(app);
 
 if (
   process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" &&
-  typeof window !== "undefined" &&
   !(globalThis as any)._firestoreEmulatorConnected
 ) {
   try {
