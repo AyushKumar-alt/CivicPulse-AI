@@ -13,9 +13,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = (globalThis as any)._firestoreDb || initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
-});
+export const db = (globalThis as any)._firestoreDb || getFirestore(app);
 (globalThis as any)._firestoreDb = db;
 
 const isEmulator = (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
