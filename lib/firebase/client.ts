@@ -20,18 +20,22 @@ export const db =
   initializeFirestore(app, {}, "default");
 (globalThis as any)._firestoreDb = db;
 
-const isEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" || (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true";
+const isEmulator =
+  process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" ||
+  (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true" ||
+  Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
-if (
-  isEmulator &&
-  !(globalThis as any)._firestoreEmulatorConnected
-) {
-  try {
-    connectFirestoreEmulator(db, "127.0.0.1", 8080);
-    (globalThis as any)._firestoreEmulatorConnected = true;
-    console.log("[Firebase Client] Connected to local Firestore Emulator at 127.0.0.1:8080");
-  } catch (err) {
-    console.warn("[Firebase Client] Firestore Emulator connection check:", err);
+if (isEmulator) {
+  if (!(globalThis as any)._firestoreEmulatorConnected) {
+    try {
+      const host = process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
+      const [h, p] = host.split(":");
+      connectFirestoreEmulator(db, h || "127.0.0.1", Number(p) || 8080);
+      (globalThis as any)._firestoreEmulatorConnected = true;
+      console.log(`[Firebase Client] Connected to local Firestore Emulator at ${host}`);
+    } catch (err) {
+      console.warn("[Firebase Client] Firestore Emulator connection check:", err);
+    }
   }
 }
 
