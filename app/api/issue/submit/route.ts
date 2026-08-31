@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
 
     const repo = new FirestoreIssueRepository(getAdminDb());
     const geoAdapter = new NominatimGeoAdapter();
-    const aiAdapter = new GeminiAIAdapter({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+    const aiAdapter = new GeminiAIAdapter({ apiKey });
     const submitService = new SubmitIssueService(geoAdapter, aiAdapter, repo);
 
     const submitResult = await submitService.submitIssue({

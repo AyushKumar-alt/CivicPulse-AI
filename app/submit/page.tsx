@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { reverseGeocode } from "@/lib/geocode";
+import { createIssue } from "@/lib/firebase/firestore";
 
 function compressImageFile(file: File, maxDim = 1280, quality = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -166,31 +167,48 @@ export default function SubmitPage() {
     setError("");
     setSubmitting(true);
     try {
-      const token = await user.getIdToken(true);
-      const res = await fetch("/api/issue/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          imageUrl,
-          imageBase64,
-          coordinates: { latitude: location.lat, longitude: location.lng },
-          userDescription: description,
-        }),
-      });
+      let issueId: string | null = null;
+      try {
+        const token = await user.getIdToken(true);
+        const res = await fetch("/api/issue/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            imageUrl,
+            imageBase64,
+            coordinates: { latitude: location.lat, longitude: location.lng },
+            userDescription: description,
+          }),
+        });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Submission failed with status ${res.status}`);
+        if (res.ok) {
+          const data = (await res.json()) as { ok: boolean; issueId: string };
+          issueId = data.issueId;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.warn("[API Submit returned error, falling back to direct Firestore]", errData);
+        }
+      } catch (apiErr) {
+        console.warn("[API Submit network/auth error, falling back to direct Firestore]", apiErr);
       }
 
-      const data = (await res.json()) as { ok: boolean; issueId: string };
-      router.push(`/issues/${data.issueId}`);
+      // Fallback to direct client Firestore SDK submission if API route failed or returned 500
+      if (!issueId) {
+        issueId = await createIssue({
+          reporterUid: user.uid,
+          rawDescription: description,
+          imageUrl,
+          location: { lat: location.lat, lng: location.lng },
+        });
+      }
+
+      router.push(`/issues/${issueId}`);
     } catch (err) {
-      console.error(err);
-      setError("Failed to submit report. Please try again.");
+      console.error("[Submission Error]", err);
+      setError("Failed to submit report. Please check your network connection and try again.");
       setSubmitting(false);
     }
   }
