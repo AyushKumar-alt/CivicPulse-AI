@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "emulator": "set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot&& set PATH=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot\\bin;%PATH%&& npx firebase emulators:start --only firestore",
+    "emulator": "set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot&& set PATH=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot\\bin;%PATH%&& npx firebase emulators:start --only firestore,auth",
     "emulator:seed": "node scripts/seed-emulator.mjs",
     "cap:sync": "npx cap sync",
     "cap:open:android": "npx cap open android"

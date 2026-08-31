@@ -1,4 +1,8 @@
-if ((process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() !== "true") {
+const isEmulator =
+  (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR ?? "").toLowerCase() === "true" ||
+  Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+
+if (!isEmulator) {
   delete process.env.FIRESTORE_EMULATOR_HOST;
 }
 

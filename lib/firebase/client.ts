@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -26,6 +26,16 @@ const isEmulator =
   Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
 if (isEmulator) {
+  if (!(globalThis as any)._authEmulatorConnected) {
+    try {
+      connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+      (globalThis as any)._authEmulatorConnected = true;
+      console.log("[Firebase Client] Connected to local Auth Emulator at 127.0.0.1:9099");
+    } catch (err) {
+      console.warn("[Firebase Client] Auth Emulator connection check:", err);
+    }
+  }
+
   if (!(globalThis as any)._firestoreEmulatorConnected) {
     try {
       const host = process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
