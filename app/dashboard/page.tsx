@@ -593,7 +593,7 @@ export default function DashboardPage() {
         </div>
 
         <p className="text-xs text-center text-gray-400 pb-8">
-          Signed in as {user.email}
+          Signed in as {user.email ? user.email : user.isAnonymous ? "Guest Citizen" : user.phoneNumber ? "Mobile Citizen" : "Citizen"}
         </p>
       </div>
     </div>

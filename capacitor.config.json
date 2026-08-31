@@ -1,0 +1,9 @@
+{
+  "appId": "com.civicpulse.ai",
+  "appName": "CivicPulse AI",
+  "webDir": "out",
+  "server": {
+    "url": "https://community-hero-ai-kappa.vercel.app",
+    "cleartext": true
+  }
+}

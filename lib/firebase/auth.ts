@@ -4,6 +4,10 @@ import {
   sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
+  signInAnonymously,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
   User,
 } from "firebase/auth";
 
@@ -24,4 +28,20 @@ export const observeAuth = (
   callback: (user: User | null) => void
 ) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const signInAsGuest = () => signInAnonymously(auth);
+
+export const initPhoneRecaptcha = (containerId: string) => {
+  return new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {},
+  });
+};
+
+export const sendPhoneOtp = (
+  phoneNumber: string,
+  recaptchaVerifier: RecaptchaVerifier
+): Promise<ConfirmationResult> => {
+  return signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
 };

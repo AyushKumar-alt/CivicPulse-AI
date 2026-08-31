@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CivicPulse AI</string>
+    <string name="title_activity_main">CivicPulse AI</string>
+    <string name="package_name">com.civicpulse.ai</string>
+    <string name="custom_url_scheme">com.civicpulse.ai</string>
+</resources>

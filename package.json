@@ -8,9 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "emulator": "set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot&& set PATH=C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot\\bin;%PATH%&& npx firebase emulators:start --only firestore",
-    "emulator:seed": "node scripts/seed-emulator.mjs"
+    "emulator:seed": "node scripts/seed-emulator.mjs",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@google/genai": "^2.10.0",
     "@google/generative-ai": "^0.24.1",
     "firebase": "^12.15.0",

@@ -92,7 +92,7 @@ export async function getMyIssues(uid: string) {
     return userDocs;
   } catch (err: any) {
     console.error("[getMyIssues Read Error]", err);
-    throw err;
+    return [];
   }
 }
 
@@ -108,12 +108,22 @@ export async function getCommunityIssues(): Promise<Record<string, unknown>[]> {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch (err: any) {
     console.error("[getCommunityIssues Read Error]", err);
-    throw err;
+    try {
+      const fallbackQuery = query(collection(db, "issues"), limit(30));
+      const fallbackSnap = await getDocs(fallbackQuery);
+      return fallbackSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch {
+      return [];
+    }
   }
 }
 
 export async function hasUserConfirmed(issueId: string, uid: string): Promise<boolean> {
-  const ref = doc(db, "issues", issueId, "confirmations", uid);
-  const snap = await getDoc(ref);
-  return snap.exists();
+  try {
+    const ref = doc(db, "issues", issueId, "confirmations", uid);
+    const snap = await getDoc(ref);
+    return snap.exists();
+  } catch {
+    return false;
+  }
 }
