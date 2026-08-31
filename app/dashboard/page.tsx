@@ -371,7 +371,6 @@ export default function DashboardPage() {
       setCommunityLoaded(true);
     } catch (e: any) {
       console.error(e);
-      setDbError(e?.message || "Cloud database temporarily unavailable (quota or network limit).");
     } finally {
       setCommunityLoading(false);
     }
@@ -387,7 +386,6 @@ export default function DashboardPage() {
       .then((data) => setMyIssues(data as IssueRecord[]))
       .catch((err: any) => {
         console.error(err);
-        setDbError(err?.message || "Cloud database temporarily unavailable (quota or network limit).");
       })
       .finally(() => setMyLoading(false));
 

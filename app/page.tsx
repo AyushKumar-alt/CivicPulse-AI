@@ -37,13 +37,13 @@ export default function LandingPage() {
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <Link
-            href="/sign-in"
+            href="/submit"
             className="bg-blue-600 text-white rounded-xl px-6 py-3 text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             Report an Issue
           </Link>
           <Link
-            href="/sign-in"
+            href="/dashboard"
             className="border border-gray-200 text-gray-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             See Live Dashboard

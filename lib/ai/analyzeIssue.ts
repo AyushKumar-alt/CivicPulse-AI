@@ -460,81 +460,82 @@ export async function analyzeIssue(issueId: string, force = false): Promise<void
       contextHint,
     );
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not set in environment.");
-
-    const ai = new GoogleGenAI({ apiKey });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
     let aiResult: AiResult | null = null;
     let usedFallback = false;
 
-    const modelsToTry = getGeminiModelChain();
-    const attempts: GeminiAttemptLog[] = [];
-    let lastError: unknown = null;
+    if (apiKey) {
+      const modelsToTry = getGeminiModelChain();
+      const attempts: GeminiAttemptLog[] = [];
+      let lastError: unknown = null;
 
-    for (const m of modelsToTry) {
-      try {
-        aiResult = await callWithRetry(async () => {
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-          const response = await withTimeout(
-            fetch(geminiUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": apiKey,
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: "user",
-                    parts: [
-                      { inline_data: { mime_type: mimeType, data: imageBase64 } },
-                      { text: prompt },
-                    ],
-                  },
-                ],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  temperature: 0.1,
-                  maxOutputTokens: 4096,
+      for (const m of modelsToTry) {
+        try {
+          aiResult = await callWithRetry(async () => {
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+            const response = await withTimeout(
+              fetch(geminiUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-goog-api-key": apiKey,
                 },
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [
+                        { inline_data: { mime_type: mimeType, data: imageBase64 } },
+                        { text: prompt },
+                      ],
+                    },
+                  ],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.1,
+                    maxOutputTokens: 4096,
+                  },
+                }),
               }),
-            }),
-            GEMINI_TIMEOUT_MS,
-            "Gemini REST API",
-          );
+              GEMINI_TIMEOUT_MS,
+              "Gemini REST API",
+            );
 
-          if (!response.ok) {
-            const errBody = await response.text().catch(() => "");
-            attempts.push({
-              model: m,
-              status: response.status,
-              message: errBody.slice(0, 150),
-            });
-            throw new Error(`Gemini HTTP ${response.status}: ${errBody.slice(0, 150)}`);
-          }
+            if (!response.ok) {
+              const errBody = await response.text().catch(() => "");
+              attempts.push({
+                model: m,
+                status: response.status,
+                message: errBody.slice(0, 150),
+              });
+              throw new Error(`Gemini HTTP ${response.status}: ${errBody.slice(0, 150)}`);
+            }
 
-          const resJson = (await response.json()) as {
-            candidates?: { content?: { parts?: { text?: string }[] } }[];
-          };
-          const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
-          const jsonText = extractJson(rawText);
-          const parsed = JSON.parse(jsonText) as AiResult;
-          parsed.modelUsed = m;
-          return parsed;
-        }, issueId);
-        if (aiResult) break;
-      } catch (geminiErr) {
-        lastError = geminiErr;
-        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-        console.warn(`[analyzeIssue][${issueId}] Model ${m} failed (${msg.slice(0, 80)}).`);
+            const resJson = (await response.json()) as {
+              candidates?: { content?: { parts?: { text?: string }[] } }[];
+            };
+            const rawText = (resJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+            const jsonText = extractJson(rawText);
+            const parsed = JSON.parse(jsonText) as AiResult;
+            parsed.modelUsed = m;
+            return parsed;
+          }, issueId);
+          if (aiResult) break;
+        } catch (geminiErr) {
+          lastError = geminiErr;
+          const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+          console.warn(`[analyzeIssue][${issueId}] Model ${m} failed (${msg.slice(0, 80)}).`);
+        }
+      }
+
+      if (!aiResult) {
+        console.error(`[analyzeIssue][${issueId}] All Gemini inference models failed:`, attempts);
       }
     }
 
     if (!aiResult) {
-      console.error(`[analyzeIssue][${issueId}] All Gemini inference models failed:`, attempts);
-      const msg = lastError instanceof Error ? lastError.message : String(lastError);
-      console.warn(`[${issueId}] All Gemini models failed (${msg.slice(0, 80)}), using deterministic fallback.`);
+      console.warn(`[${issueId}] Gemini API key missing or models unavailable, using deterministic fallback.`);
       aiResult = deterministicAnalysis(description.trim());
       usedFallback = true;
     }
