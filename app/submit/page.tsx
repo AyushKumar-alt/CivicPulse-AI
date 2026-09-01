@@ -296,12 +296,13 @@ export default function SubmitPage() {
               </div>
             )}
 
-            {/* Both inputs use accept="image/*" without capture — avoids iOS Safari page-reload bug.
-                The OS native sheet shows "Take Photo" + "Gallery" options automatically. */}
+            {/* cameraInputRef uses capture="environment" to launch camera directly on mobile devices.
+                fileInputRef omits capture to open photo gallery / file picker. */}
             <input
               ref={cameraInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={handleImageChange}
               className="hidden"
             />
