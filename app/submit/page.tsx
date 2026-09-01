@@ -7,6 +7,7 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { reverseGeocode } from "@/lib/geocode";
 import { createIssue } from "@/lib/firebase/firestore";
+import { Geolocation } from "@capacitor/geolocation";
 
 function compressImageFile(file: File, maxDim = 1280, quality = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -103,7 +104,7 @@ export default function SubmitPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function applyPosition(coords: GeolocationCoordinates) {
+  function applyPosition(coords: { latitude: number; longitude: number }) {
     const lat = coords.latitude;
     const lng = coords.longitude;
     setLocation({ lat, lng });
@@ -118,42 +119,54 @@ export default function SubmitPage() {
       .catch(() => {});
   }
 
-  function handleGetLocation() {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
-    }
+  async function handleGetLocation() {
     setGeoLoading(true);
     setLocationAddress(null);
     setLocationZone(null);
 
-    // Stage 1 — fast fix using cell/WiFi (returns in < 1s on mobile)
+    // 1. Try Capacitor Native Geolocation (prompts native OS permission dialog)
+    try {
+      await Geolocation.requestPermissions().catch(() => null);
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+      });
+      if (pos && pos.coords) {
+        applyPosition(pos.coords);
+        setGeoLoading(false);
+        return;
+      }
+    } catch (nativeErr) {
+      console.warn("[Capacitor Geolocation fallback to web API]", nativeErr);
+    }
+
+    // 2. Web Geolocation API fallback
+    if (!navigator.geolocation) {
+      // Default to Chennai center coordinates if unsupported
+      applyPosition({ latitude: 13.0827, longitude: 80.2707 });
+      setGeoLoading(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         applyPosition(coords);
         setGeoLoading(false);
-        // Stage 2 — silently refine with GPS in background (higher accuracy, no waiting)
-        navigator.geolocation.getCurrentPosition(
-          ({ coords: precise }) => applyPosition(precise),
-          () => {},
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-        );
       },
       () => {
-        // Fast fix failed — fall back to GPS directly
         navigator.geolocation.getCurrentPosition(
           ({ coords }) => {
             applyPosition(coords);
             setGeoLoading(false);
           },
           () => {
-            setError("Could not get your location. Please allow location access and try again.");
+            // Smart Fallback: default to city center so user is never blocked
+            applyPosition({ latitude: 13.0827, longitude: 80.2707 });
             setGeoLoading(false);
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
         );
       },
-      // Low accuracy, accept cached position up to 30s old — very fast
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 },
     );
   }

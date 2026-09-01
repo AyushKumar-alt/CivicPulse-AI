@@ -16,6 +16,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/geolocation": "^8.2.2",
     "@google/genai": "^2.10.0",
     "@google/generative-ai": "^0.24.1",
     "firebase": "^12.15.0",
